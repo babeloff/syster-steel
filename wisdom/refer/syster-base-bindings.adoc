@@ -1,0 +1,250 @@
+= syster-base Steel bindings reference
+:description: Complete API reference for Steel functions that access syster-base SysML v2 constructs
+:icons: font
+
+These functions are registered with the `steel-core` `Engine` by the syster-steel
+host application using `Engine::register_type` and `Engine::register_value`.
+They are available without any `require` once the host has loaded the `syster/base` module:
+
+[source,scheme]
+----
+(require "syster/base")
+----
+
+IMPORTANT: This document describes the intended API.
+Check `src/main.rs` for what is currently registered in the build you are running.
+See xref:../explain/steel-as-extension-language.adoc[Why Steel Scheme]
+for how Rust types are registered with the embedded engine.
+
+== Model functions
+
+=== `(syster/parse-file path)` → `SysmlModel`
+
+Parse a SysML v2 file.
+`path` is a string.
+
+Raises an error if the file cannot be read.
+Parse errors within the file are recoverable —
+the model is still returned with partial content;
+use `syster/check-file` to inspect diagnostics.
+
+[source,scheme]
+----
+(define model (syster/parse-file "vehicle.sysml"))
+----
+
+=== `(syster/file-symbols model)` → list of `HirSymbol`
+
+Return all symbols extracted from `model` in definition order.
+The list is flat; nesting is encoded in qualified names.
+
+=== `(syster/check-file model)` → list of `Diagnostic`
+
+Return any parse or semantic diagnostics for `model`.
+
+[source,scheme]
+----
+(for-each
+  (lambda (d)
+    (when (string=? (diagnostic/severity d) "Error")
+      (error (diagnostic/message d))))
+  (syster/check-file model))
+----
+
+== Diagnostic functions
+
+=== `(diagnostic/severity d)` → string
+
+One of `"Error"`, `"Warning"`, `"Info"`, `"Hint"`.
+
+=== `(diagnostic/message d)` → string
+
+Human-readable message text.
+
+=== `(diagnostic/line d)` → integer
+
+1-based start line of the diagnostic span.
+
+== HirSymbol accessors
+
+=== `(hir-symbol/name sym)` → string
+
+The simple (unqualified) name.
+
+=== `(hir-symbol/qualified-name sym)` → string
+
+`"::"` separated qualified name, e.g. `"VehicleModel::Engine"`.
+
+=== `(hir-symbol/kind sym)` → string
+
+The `SymbolKind` as a string.
+See <<symbolkind-strings>> below.
+
+=== `(hir-symbol/is-abstract? sym)` → boolean
+
+=== `(hir-symbol/is-variation? sym)` → boolean
+
+=== `(hir-symbol/is-readonly? sym)` → boolean
+
+=== `(hir-symbol/is-derived? sym)` → boolean
+
+=== `(hir-symbol/is-ordered? sym)` → boolean
+
+=== `(hir-symbol/is-nonunique? sym)` → boolean
+
+=== `(hir-symbol/is-portion? sym)` → boolean
+
+=== `(hir-symbol/is-individual? sym)` → boolean
+
+=== `(hir-symbol/is-end? sym)` → boolean
+
+=== `(hir-symbol/direction sym)` → string or `#f`
+
+Returns `"In"`, `"Out"`, or `"InOut"` for directional features; `#f` otherwise.
+
+=== `(hir-symbol/multiplicity sym)` → list or `#f`
+
+Returns `(list lower upper)` where each bound is an integer or `#f` (unbounded).
+Returns `#f` if no explicit multiplicity is stated.
+
+[source,scheme]
+----
+(let ([m (hir-symbol/multiplicity sym)])
+  (when m
+    (displayln (string-append
+                "["
+                (if (car m) (number->string (car m)) "0")
+                ".."
+                (if (cadr m) (number->string (cadr m)) "*")
+                "]"))))
+----
+
+=== `(hir-symbol/doc sym)` → string or `#f`
+
+Documentation comment text, or `#f` if none.
+
+=== `(hir-symbol/supertypes sym)` → list of string
+
+Qualified names of the supertypes (specialization targets).
+
+=== `(hir-symbol/relationships sym)` → list of `HirRelationship`
+
+=== `(hir-symbol/file sym)` → string
+
+Path to the source file that defines this symbol.
+
+=== `(hir-symbol/line sym)` → integer
+
+1-based start line within the source file.
+
+=== `(hir-symbol/view-expose sym)` → list of string
+
+For `ViewDefinition` and `ViewUsage` symbols: qualified-name patterns from
+`expose` clauses.
+Empty list for non-view symbols.
+
+=== `(hir-symbol/view-rendering sym)` → string or `#f`
+
+For `ViewDefinition` and `ViewUsage`: the qualified name of the rendering
+definition, or `#f`.
+
+== HirRelationship accessors
+
+=== `(hir-rel/kind rel)` → string
+
+One of: `"TypedBy"`, `"Specializes"`, `"Redefines"`, `"Subsets"`,
+`"References"`, `"Satisfies"`, `"Performs"`, `"Exhibits"`, `"Includes"`,
+`"Asserts"`, `"Verifies"`.
+
+=== `(hir-rel/target rel)` → string
+
+The qualified name of the relationship target.
+May be unresolved (containing `?`) if the target was not found in the model.
+
+[#symbolkind-strings]
+== SymbolKind strings
+
+.Definitions
+[cols="2,3"]
+|===
+| String | SysML v2 keyword
+
+| `"Package"` | `package`
+| `"PartDefinition"` | `part def`
+| `"ItemDefinition"` | `item def`
+| `"AttributeDefinition"` | `attribute def`
+| `"PortDefinition"` | `port def`
+| `"ConnectionDefinition"` | `connection def`
+| `"InterfaceDefinition"` | `interface def`
+| `"AllocationDefinition"` | `allocation def`
+| `"ActionDefinition"` | `action def`
+| `"StateDefinition"` | `state def`
+| `"ConstraintDefinition"` | `constraint def`
+| `"RequirementDefinition"` | `requirement def`
+| `"UseCaseDefinition"` | `use case def`
+| `"ViewDefinition"` | `view def`
+| `"ViewpointDefinition"` | `viewpoint def`
+| `"RenderingDefinition"` | `rendering def`
+| `"MetadataDefinition"` | `metadata def`
+| `"EnumerationDefinition"` | `enum def`
+| `"Class"` | `class`
+| `"DataType"` | `datatype`
+|===
+
+.Usages
+[cols="2,3"]
+|===
+| String | SysML v2 usage
+
+| `"PartUsage"` | `part`
+| `"AttributeUsage"` | `attribute`
+| `"PortUsage"` | `port`
+| `"ItemUsage"` | `item`
+| `"ActionUsage"` | `action`
+| `"StateUsage"` | `state`
+| `"TransitionUsage"` | `transition`
+| `"ConnectionUsage"` | `connect`
+| `"InterfaceUsage"` | `interface`
+| `"AllocationUsage"` | `allocate`
+| `"RequirementUsage"` | `requirement`
+| `"ConstraintUsage"` | `constraint`
+| `"ReferenceUsage"` | `ref`
+| `"ViewUsage"` | `view`
+| `"ViewpointUsage"` | `viewpoint`
+|===
+
+.Other
+[cols="2,3"]
+|===
+| String | Meaning
+
+| `"Comment"` | Documentation comment
+| `"Import"` | `import` statement
+| `"Alias"` | `alias` declaration
+| `"Dependency"` | `dependency` relationship
+| `"Other"` | Unrecognised element
+|===
+
+== Utility functions
+
+=== `(syster/find-by-name symbols name-str)` → `HirSymbol` or `#f`
+
+Find the first symbol with the given simple name.
+
+=== `(syster/find-by-qname symbols qname-str)` → `HirSymbol` or `#f`
+
+Find the symbol with the given fully-qualified name.
+
+=== `(syster/children-of symbols parent-sym)` → list of `HirSymbol`
+
+Return the direct children of `parent-sym` (depth-1 descendants by qualified name).
+
+=== `(syster/descendants-of symbols parent-sym)` → list of `HirSymbol`
+
+Return all descendants at any depth.
+
+== See also
+
+* xref:../explain/steel-as-extension-language.adoc[Why Steel Scheme — embedding architecture]
+* xref:../explain/sysml-model-in-steel.adoc[How SysML models are represented in Steel]
+* xref:../instruct/load-sysml-model.adoc[How to load a SysML model]

@@ -1,0 +1,146 @@
+= Tutorial 2 — Loading a SysML v2 model
+:description: Parse a SysML file and explore its symbols from the Steel REPL
+:icons: font
+
+This tutorial shows how to parse a SysML v2 file using the `syster/base` module
+and explore the symbols it contains from the Steel REPL.
+
+*Prerequisites:* complete xref:01-getting-started.adoc[Tutorial 1] and have
+`syster-steel` installed with the `syster/base` Rust bindings available.
+
+NOTE: The `syster/base` bindings are registered by the syster-steel host application
+when it starts the `steel-core` `Engine`.
+If `(require "syster/base")` raises `module not found`,
+the bindings have not yet been compiled into your build.
+See xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings] for the full API.
+
+== 1. Create a sample SysML v2 model
+
+Save the following as `vehicle.sysml`:
+
+[source,sysml]
+----
+package VehicleModel {
+
+    part def VehicleSystem {
+        attribute mass : Real;
+        attribute velocity : Real;
+
+        part engine : Engine;
+        part chassis : Chassis;
+        port drivePort : DrivePort;
+    }
+
+    part def Engine {
+        attribute power : Real;
+        attribute efficiency : Real;
+        port fuelIn : FuelPort;
+        port driveOut : DrivePort;
+    }
+
+    part def Chassis {
+        attribute weight : Real;
+    }
+
+    port def DrivePort;
+    port def FuelPort;
+}
+----
+
+== 2. Load the model in the REPL
+
+Start the REPL:
+
+----
+syster-steel
+----
+
+Load the `syster/base` module, then parse the file:
+
+[source,scheme]
+----
+> (require "syster/base")
+> (define model (syster/parse-file "vehicle.sysml"))
+> model
+#<SysmlModel vehicle.sysml>
+----
+
+== 3. Extract symbols
+
+[source,scheme]
+----
+> (define symbols (syster/file-symbols model))
+> (length symbols)
+7
+----
+
+Each element of `symbols` is an opaque `HirSymbol` value produced by the
+syster-base HIR extraction pass.
+Use accessor functions to inspect it.
+
+== 4. Inspect a symbol
+
+[source,scheme]
+----
+> (define first-sym (car symbols))
+> (hir-symbol/name first-sym)
+"VehicleModel"
+> (hir-symbol/kind first-sym)
+"Package"
+> (hir-symbol/qualified-name first-sym)
+"VehicleModel"
+----
+
+== 5. Filter by kind
+
+[source,scheme]
+----
+> (define part-defs
+    (filter (lambda (s)
+              (string=? (hir-symbol/kind s) "PartDefinition"))
+            symbols))
+> (map hir-symbol/name part-defs)
+'("VehicleSystem" "Engine" "Chassis")
+----
+
+Common kind strings: `"Package"`, `"PartDefinition"`, `"PartUsage"`,
+`"PortDefinition"`, `"AttributeUsage"`, `"ConnectionDefinition"`.
+See xref:../refer/syster-base-bindings.adoc#symbolkind-strings[SymbolKind strings]
+for the complete list.
+
+== 6. Inspect relationships
+
+[source,scheme]
+----
+> (define vs (car part-defs))          ; VehicleSystem
+> (hir-symbol/name vs)
+"VehicleSystem"
+> (define rels (hir-symbol/relationships vs))
+> (length rels)
+2
+> (map (lambda (r)
+         (list (hir-rel/kind r) (hir-rel/target r)))
+       rels)
+'(("TypedBy" "Engine") ("TypedBy" "Chassis"))
+----
+
+== 7. Write a summary function
+
+[source,scheme]
+----
+(define (summarise-symbol sym)
+  (displayln
+    (string-append
+      (hir-symbol/kind sym)
+      " "
+      (hir-symbol/qualified-name sym)
+      (if (hir-symbol/is-abstract? sym) " [abstract]" ""))))
+
+(for-each summarise-symbol symbols)
+----
+
+== What next?
+
+* xref:03-generating-a-plantuml-diagram.adoc[Tutorial 3 — Generating a PlantUML diagram]
+* xref:../instruct/load-sysml-model.adoc[How-to: Load a SysML model from a file]
+* xref:../refer/syster-base-bindings.adoc[Reference: syster-base Steel bindings]

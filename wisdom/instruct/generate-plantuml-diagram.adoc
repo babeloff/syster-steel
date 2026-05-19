@@ -1,0 +1,137 @@
+= How to generate a PlantUML diagram from a SysML v2 model
+:description: Generating BDD, IBD, package, and state machine diagrams from Steel scripts
+:icons: font
+
+Require the necessary modules at the top of your script:
+
+[source,scheme]
+----
+(require "syster/base")
+(require "plantuml")          ; from wisdom/refer/plantuml.scm
+----
+
+== Block Definition Diagram (BDD)
+
+A BDD shows block definitions, their attributes, ports, and composition relationships.
+It corresponds to a SysML v2 Part Definition tree.
+
+[source,scheme]
+----
+(define model   (syster/parse-file "vehicle.sysml"))
+(define symbols (syster/file-symbols model))
+
+(write-plantuml-file
+  (generate-bdd symbols)
+  "vehicle-bdd.puml")
+----
+
+To filter to a specific package:
+
+[source,scheme]
+----
+(define pkg-syms
+  (filter (lambda (s)
+            (starts-with? (hir-symbol/qualified-name s) "VehicleModel::"))
+          symbols))
+
+(write-plantuml-file (generate-bdd pkg-syms) "vehicle-bdd.puml")
+----
+
+== Internal Block Diagram (IBD)
+
+An IBD shows the internal structure of one block:
+its part usages and port connections.
+
+[source,scheme]
+----
+(define vs (syster/find-by-name symbols "VehicleSystem"))
+
+(write-plantuml-file
+  (generate-ibd vs symbols)
+  "vehicle-ibd.puml")
+----
+
+== State Machine Diagram
+
+Shows state definitions and transitions within an action or state definition.
+
+[source,scheme]
+----
+(define state-def (syster/find-by-name symbols "OperationalState"))
+
+(write-plantuml-file
+  (generate-state-machine state-def symbols)
+  "operational-state.puml")
+----
+
+== Dependency / package diagram
+
+Shows packages and their import relationships.
+
+[source,scheme]
+----
+(write-plantuml-file
+  (generate-package-diagram symbols)
+  "packages.puml")
+----
+
+== Customise the output
+
+All generators accept an optional options hash as their last argument:
+
+[source,scheme]
+----
+(write-plantuml-file
+  (generate-bdd symbols
+    (hash "theme"        "plain"
+          "show-ports"   #t
+          "show-attrs"   #t
+          "title"        "Vehicle System BDD"))
+  "vehicle-bdd.puml")
+----
+
+[cols="2,1,1,3"]
+|===
+| Option key | Type | Default | Effect
+
+| `"theme"`
+| string
+| `"default"`
+| PlantUML skinparam preset
+
+| `"show-ports"`
+| boolean
+| `#t`
+| Include port usages in class boxes
+
+| `"show-attrs"`
+| boolean
+| `#t`
+| Include attribute usages
+
+| `"title"`
+| string
+| `#f`
+| Add a `title` directive
+
+| `"show-doc"`
+| boolean
+| `#f`
+| Add doc comments as notes
+|===
+
+== Write to a specific directory
+
+[source,scheme]
+----
+(require-builtin steel/filesystem)
+
+(create-directory! "out")
+(write-plantuml-file (generate-bdd symbols) "out/vehicle-bdd.puml")
+----
+
+== See also
+
+* xref:render-diagrams.adoc[How to render diagrams]
+* xref:../refer/plantuml-procedures.adoc[PlantUML generation procedures reference]
+* xref:../tutor/03-generating-a-plantuml-diagram.adoc[Tutorial 3 — end-to-end walkthrough]

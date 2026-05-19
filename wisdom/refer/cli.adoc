@@ -1,0 +1,140 @@
+= CLI reference — syster-steel
+:description: Complete reference for syster-steel command-line flags, behaviour, and environment variables
+:icons: font
+
+== Synopsis
+
+----
+syster-steel [OPTIONS] [SCRIPT]...
+----
+
+== Options
+
+[cols="1,2,1,3"]
+|===
+| Flag | Long form | Argument | Description
+
+| `-e`
+| `--eval`
+| `EXPR`
+| Evaluate EXPR before running scripts
+
+| `-i`
+| `--interactive`
+| —
+| Start the REPL after scripts complete
+
+| `-L`
+| `--load-path`
+| `DIR`
+| Add DIR to the Steel module search path (passed to `Engine::add_search_directory`)
+
+|
+| `--version`
+| —
+| Print version and exit
+
+|
+| `--help`
+| —
+| Print help and exit
+|===
+
+== Positional arguments
+
+`SCRIPT...` — one or more `.scm` files to execute in order.
+
+All scripts share a single `steel-core` `Engine` instance.
+Definitions made in earlier scripts are visible in later ones.
+
+== Behaviour
+
+[cols="3,1,2"]
+|===
+| Invocation | REPL? | Scripts run
+
+| `syster-steel` | yes | none
+| `syster-steel script.scm` | no | script.scm
+| `syster-steel -i script.scm` | yes | script.scm
+| `syster-steel -e "(+ 1 2)"` | no | none (eval only)
+| `syster-steel -i -e "(+ 1 2)"` | yes | none (eval only)
+| `syster-steel a.scm b.scm` | no | a.scm, then b.scm
+|===
+
+Rule: the REPL starts if `-i` is given,
+or if no scripts and no `-e` are given.
+
+== Evaluation order
+
+. Load paths (`-L`) are added to `Engine::add_search_directory`.
+. The `-e` expression (if given) is run via `Engine::run`.
+. Each `SCRIPT` file is read to a `String` and run via `Engine::run`, in order.
+. If the REPL should start, it opens on the same `Engine` instance.
+
+== Exit codes
+
+[cols="1,3"]
+|===
+| Code | Meaning
+
+| `0` | All scripts and expressions completed without error
+| `1` | A script or expression raised a `SteelErr`
+| `2` | A file argument could not be read
+|===
+
+== Environment variables
+
+[cols="1,3"]
+|===
+| Variable | Effect
+
+| `STEEL_HOME`
+| Root directory for Steel's standard library and cogs.
+  Defaults to `~/.steel` or XDG base directories.
+
+| `RUST_LOG`
+| Controls tracing output level.
+  Example: `RUST_LOG=debug syster-steel script.scm`
+|===
+
+== REPL key bindings
+
+[cols="1,3"]
+|===
+| Key | Action
+
+| *Ctrl-D* | Exit
+| *Ctrl-C* | Cancel current (incomplete) input; clear buffer
+| *↑ / ↓* | History navigation
+|===
+
+History is persisted to `~/.syster_steel_history` between sessions.
+The REPL accumulates lines until parentheses are balanced before passing
+the expression to `Engine::run`.
+
+== Examples
+
+----
+# Interactive REPL
+syster-steel
+
+# Run a script
+syster-steel generate-bdd.scm
+
+# Run a script with a library on the search path
+syster-steel -L /usr/share/syster-steel/wisdom/refer generate-bdd.scm
+
+# Evaluate an expression
+syster-steel -e "(displayln (+ 1 2))"
+
+# Inject a variable then run a script
+syster-steel -e "(define output-dir \"out\")" generate.scm
+
+# Load a library and drop into the REPL
+syster-steel -i -L wisdom/refer
+----
+
+== See also
+
+* xref:../explain/steel-as-extension-language.adoc[Why Steel Scheme — the embedded engine architecture]
+* https://mattwparas.github.io/steel/book/start/embedded.html[Steel Book — Using Steel as an embedded scripting engine]

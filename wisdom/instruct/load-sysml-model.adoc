@@ -1,0 +1,120 @@
+= How to load a SysML v2 model
+:description: Parsing a SysML file and querying its symbols from Steel scripts
+:icons: font
+
+== Prerequisites
+
+The `syster/base` module must be available.
+Load it at the top of any script that accesses SysML constructs:
+
+[source,scheme]
+----
+(require "syster/base")
+----
+
+See xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings] for the full API.
+
+== Parse a file
+
+[source,scheme]
+----
+(define model (syster/parse-file "path/to/model.sysml"))
+----
+
+`syster/parse-file` returns a `SysmlModel` value,
+or raises an error if the file cannot be read.
+
+== Extract all symbols
+
+[source,scheme]
+----
+(define symbols (syster/file-symbols model))
+----
+
+Returns a flat list of `HirSymbol` values representing every element in the
+model, including nested members.
+The list order matches definition order in the source file.
+
+== Check for parse errors
+
+[source,scheme]
+----
+(define diagnostics (syster/check-file model))
+(for-each
+  (lambda (d)
+    (displayln (string-append
+                (diagnostic/severity d) ": "
+                (diagnostic/message d))))
+  diagnostics)
+----
+
+== Filter symbols by kind
+
+[source,scheme]
+----
+(define (symbols-of-kind syms kind-str)
+  (filter (lambda (s)
+            (string=? (hir-symbol/kind s) kind-str))
+          syms))
+
+(define part-defs (symbols-of-kind symbols "PartDefinition"))
+(define port-defs (symbols-of-kind symbols "PortDefinition"))
+(define pkgs      (symbols-of-kind symbols "Package"))
+----
+
+See xref:../refer/syster-base-bindings.adoc#symbolkind-strings[SymbolKind strings]
+for the complete list.
+
+== Find a symbol by qualified name
+
+[source,scheme]
+----
+(define (find-by-qname syms qname)
+  (let loop ([ss syms])
+    (cond [(null? ss) #f]
+          [(string=? (hir-symbol/qualified-name (car ss)) qname) (car ss)]
+          [else (loop (cdr ss))])))
+
+(define engine (find-by-qname symbols "VehicleModel::Engine"))
+----
+
+== Get direct children of a symbol
+
+Symbols are a flat list;
+children share a qualified-name prefix with their parent.
+
+[source,scheme]
+----
+(define (direct-children syms parent-sym)
+  (let* ([pqn    (hir-symbol/qualified-name parent-sym)]
+         [prefix (string-append pqn "::")]
+         [depth  (+ 1 (length (string-split pqn "::")))])
+    (filter (lambda (s)
+              (let ([sqn (hir-symbol/qualified-name s)])
+                (and (starts-with? sqn prefix)
+                     (= (length (string-split sqn "::")) depth))))
+            syms)))
+----
+
+== Work with relationships
+
+[source,scheme]
+----
+(define rels (hir-symbol/relationships some-sym))
+
+(for-each
+  (lambda (r)
+    (displayln
+      (string-append
+       (hir-rel/kind r) " -> " (hir-rel/target r))))
+  rels)
+----
+
+Relationship kinds: `"TypedBy"`, `"Specializes"`, `"Redefines"`, `"Subsets"`,
+`"Satisfies"`, `"Performs"`, `"Verifies"`.
+
+== See also
+
+* xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings reference]
+* xref:../explain/sysml-model-in-steel.adoc[How SysML models are represented in Steel]
+* xref:../tutor/02-loading-a-sysml-model.adoc[Tutorial 2 — Loading a SysML model]

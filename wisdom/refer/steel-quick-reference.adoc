@@ -1,0 +1,194 @@
+= Steel language quick reference
+:description: Core forms, list/string/hash operations, modules, and file I/O
+:icons: font
+
+Steel is an R5RS-compliant Scheme with Racket-style modules.
+See the https://mattwparas.github.io/steel/book/[Steel Book] for the full language reference.
+
+NOTE: In syster-steel, all expressions are evaluated by a single `steel-core` `Engine`
+instance via `Engine::run`.
+The REPL, `-e` expressions, and script files all share the same engine and namespace.
+
+== Core forms
+
+[cols="2,3,2"]
+|===
+| Form | Example | Notes
+
+| `define` | `(define x 42)` | Bind a value
+| `define` | `(define (f x) (* x 2))` | Define a function
+| `lambda` | `(lambda (x y) (+ x y))` | Anonymous function
+| `let` | `(let ([x 1] [y 2]) (+ x y))` | Local bindings (parallel)
+| `let*` | `(let* ([x 1] [y (+ x 1)]) y)` | Local bindings (sequential)
+| `letrec` | `(letrec ([even? (lambda (n) …)]) …)` | Mutually recursive locals
+| `if` | `(if test then else)` | Conditional
+| `cond` | `(cond [(= x 0) "zero"] [else "other"])` | Multi-branch
+| `case` | `(case x [(1 2) "low"] [else "high"])` | Value dispatch
+| `and` | `(and a b c)` | Short-circuit and
+| `or` | `(or a b c)` | Short-circuit or
+| `begin` | `(begin e1 e2 e3)` | Sequence; returns last
+| `when` | `(when test body...)` | If without else
+| `unless` | `(unless test body...)` | If (negated) without else
+| `set!` | `(set! x 99)` | Mutate a binding
+| `quote` | `'(1 2 3)` | Literal data
+|===
+
+== List operations
+
+[cols="2,3,2"]
+|===
+| Procedure | Example | Returns
+
+| `list` | `(list 1 2 3)` | `'(1 2 3)`
+| `cons` | `(cons 0 '(1 2))` | `'(0 1 2)`
+| `car` / `first` | `(car '(1 2 3))` | `1`
+| `cdr` / `rest` | `(cdr '(1 2 3))` | `'(2 3)`
+| `length` | `(length '(a b c))` | `3`
+| `append` | `(append '(1 2) '(3 4))` | `'(1 2 3 4)`
+| `reverse` | `(reverse '(1 2 3))` | `'(3 2 1)`
+| `map` | `(map (lambda (x) (* x x)) '(1 2 3))` | `'(1 4 9)`
+| `filter` | `(filter odd? '(1 2 3 4))` | `'(1 3)`
+| `for-each` | `(for-each displayln '(1 2 3))` | void
+| `apply` | `(apply + '(1 2 3))` | `6`
+| `member` | `(member 2 '(1 2 3))` | `'(2 3)` or `#f`
+| `null?` | `(null? '())` | `#t`
+| `list-ref` | `(list-ref '(a b c) 1)` | `b`
+| `take` | `(take '(1 2 3 4) 2)` | `'(1 2)`
+| `last` | `(last '(1 2 3))` | `3`
+| `sort` | `(sort '(3 1 2) <)` | `'(1 2 3)`
+|===
+
+== String operations
+
+[cols="2,3,2"]
+|===
+| Procedure | Example | Returns
+
+| `string-append` | `(string-append "a" "b")` | `"ab"`
+| `substring` | `(substring "hello" 1 3)` | `"el"`
+| `string-length` | `(string-length "abc")` | `3`
+| `string=?` | `(string=? "a" "a")` | `#t`
+| `string-upcase` | `(string-upcase "hello")` | `"HELLO"`
+| `string-downcase` | `(string-downcase "ABC")` | `"abc"`
+| `string->number` | `(string->number "42")` | `42`
+| `number->string` | `(number->string 42)` | `"42"`
+| `string-contains?` | `(string-contains? "hello" "ell")` | `#t`
+| `starts-with?` | `(starts-with? "hello" "hel")` | `#t`
+| `ends-with?` | `(ends-with? "hello" "llo")` | `#t`
+| `trim` | `(trim "  hi  ")` | `"hi"`
+| `split-many` | `(split-many "a::b::c" "::")` | `'("a" "b" "c")`
+| `string-replace` | `(string-replace "x" "y" "axb")` | `"ayb"`
+|===
+
+== File I/O
+
+[source,scheme]
+----
+; Read a file to string
+(define port (open-input-file "input.txt"))
+(define content (read-port-to-string port))
+(close-input-port port)
+
+; Write a string to a file
+(define port (open-output-file "output.txt"))
+(display "hello\n" port)
+(close-output-port port)
+----
+
+== Filesystem (`require-builtin steel/filesystem`)
+
+[source,scheme]
+----
+(require-builtin steel/filesystem)
+
+(path-exists? "file.txt")           ; boolean
+(is-file? "file.txt")               ; boolean
+(is-dir? "some/dir")                ; boolean
+(create-directory! "new-dir")       ; void
+(delete-file! "old.txt")            ; void
+(read-dir ".")                      ; list of path strings
+(glob "src/*.scm")                  ; list of matching paths
+(file-name "/path/to/file.txt")     ; "file.txt"
+(parent-name "/path/to/file.txt")   ; "/path/to"
+(path->extension "file.txt")        ; "txt"
+----
+
+== Modules
+
+[source,scheme]
+----
+; Export from a module file
+(provide my-function helper-var)
+
+; Import a file
+(require "path/to/module.scm")
+
+; Import with a prefix
+(require (prefix-in pu: "plantuml.scm"))
+(pu:generate-bdd symbols)
+
+; Import only specific names
+(require (only-in "plantuml.scm" generate-bdd write-plantuml-file))
+
+; Import a built-in Rust module
+(require-builtin steel/filesystem)
+(require-builtin steel/process)
+(require-builtin steel/json)
+----
+
+== Process execution (`require-builtin steel/process`)
+
+[source,scheme]
+----
+(require-builtin steel/process)
+
+; Run a command and wait for it to finish
+(run-process (list "plantuml" "-svg" "diagram.puml"))
+----
+
+== Hash maps
+
+[source,scheme]
+----
+(define h (hash "key1" "val1" "key2" 42))
+(hash-ref h "key1")                  ; "val1"
+(hash-ref h "missing" "default")     ; "default"
+(hash-insert h "key3" #t)            ; new hash with key3
+(hash-contains? h "key1")            ; #t
+(hash-keys->list h)                  ; '("key1" "key2")
+----
+
+== Tail calls and recursion
+
+Steel performs proper tail-call optimisation.
+A recursive function that calls itself in tail position will not grow the stack:
+
+[source,scheme]
+----
+(define (sum-list lst acc)
+  (if (null? lst)
+      acc
+      (sum-list (cdr lst) (+ acc (car lst)))))  ; tail call
+
+(sum-list '(1 2 3 4 5) 0)
+; => 15
+----
+
+== Macros
+
+[source,scheme]
+----
+(define-syntax when
+  (syntax-rules ()
+    [(when test body ...)
+     (if test (begin body ...) (void))]))
+----
+
+`define-syntax` with `syntax-rules` is the portable pattern-matching macro system.
+Macros can be exported with `(provide my-macro)` and required with `(require …)`.
+
+== See also
+
+* https://mattwparas.github.io/steel/book/[The Steel Book]
+* xref:syster-base-bindings.adoc[syster-base Steel bindings]
+* xref:../explain/steel-as-extension-language.adoc[Why Steel Scheme as the extension language]

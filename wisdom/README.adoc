@@ -1,0 +1,66 @@
+= Wisdom — syster-steel documentation and scripts
+:description: Navigation index for the syster-steel Diátaxis documentation tree
+:toc: left
+:toclevels: 2
+:icons: font
+
+This directory follows the https://diataxis.fr/[Diátaxis] documentation framework.
+Each subdirectory serves a distinct purpose and a distinct reader need.
+
+[cols="1,1,2"]
+|===
+| Directory | Diátaxis type | Serves
+
+| `tutor/`
+| Tutorial
+| Learning — guided, step-by-step exercises
+
+| `instruct/`
+| How-to guide
+| Doing — recipes for specific goals
+
+| `explain/`
+| Explanation
+| Understanding — concepts and design decisions
+
+| `refer/`
+| Reference
+| Information — precise, complete descriptions
+|===
+
+Scheme scripts (`.scm`) that act as reusable libraries live alongside their
+reference documentation in `refer/`.
+
+NOTE: syster-steel is an *embedded* Steel Scheme engine.
+The `steel-core` crate provides the VM;
+syster-steel adds a CLI, a custom REPL, and domain-specific bindings.
+See xref:explain/steel-as-extension-language.adoc[Why Steel Scheme as the extension language]
+for the full explanation.
+
+== Quick navigation
+
+=== I want to learn
+
+* xref:tutor/01-getting-started.adoc[Getting started with the REPL]
+* xref:tutor/02-loading-a-sysml-model.adoc[Loading a SysML model]
+* xref:tutor/03-generating-a-plantuml-diagram.adoc[Generating a PlantUML diagram end-to-end]
+
+=== I want to accomplish a specific task
+
+* xref:instruct/run-a-script.adoc[Run a script]
+* xref:instruct/load-sysml-model.adoc[Load a SysML model from a file]
+* xref:instruct/generate-plantuml-diagram.adoc[Generate a PlantUML file from a SysML view]
+* xref:instruct/render-diagrams.adoc[Render a PlantUML file to SVG or PNG]
+
+=== I want to understand how things work
+
+* xref:explain/steel-as-extension-language.adoc[Why Steel Scheme as the extension language]
+* xref:explain/sysml-model-in-steel.adoc[How SysML models are represented in Steel]
+* xref:explain/plantuml-pipeline.adoc[The SysML → PlantUML → SVG pipeline]
+
+=== I need precise technical details
+
+* xref:refer/cli.adoc[CLI reference]
+* xref:refer/steel-quick-reference.adoc[Steel language quick reference]
+* xref:refer/syster-base-bindings.adoc[syster-base Steel bindings]
+* xref:refer/plantuml-procedures.adoc[PlantUML generation procedures]

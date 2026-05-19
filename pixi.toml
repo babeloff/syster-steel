@@ -1,0 +1,53 @@
+[workspace]
+authors = ["Fredrick Eisele <fred.eisele@vanderbilt.edu>"]
+channels = ["https://prefix.dev/meso-forge", "conda-forge"]
+name = "syster-steel"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks.check]
+cmd = "cargo clippy --all-targets"
+description = "Lint all targets with Clippy"
+
+[tasks.build]
+cmd = "cargo build"
+description = "Compile the binary in debug mode"
+
+[tasks.test]
+cmd = "cargo test"
+description = "Run the test suite"
+
+[tasks.fmt]
+cmd = "cargo fmt"
+description = "Format source code with rustfmt"
+
+[tasks.fmt-check]
+cmd = "cargo fmt -- --check"
+description = "Check formatting without modifying files"
+
+[tasks.run]
+cmd = "cargo run --"
+description = "Run a Steel script: pixi run run <script.scm>"
+
+[tasks.repl]
+cmd = "cargo run"
+description = "Start the interactive Steel Scheme REPL"
+
+[tasks.sync-version]
+cmd = "dasel put -f pixi.toml -t string -v $(dasel -f Cargo.toml '.package.version') 'workspace.version'"
+description = "Copy the version from Cargo.toml into pixi.toml"
+
+[tasks.set-version]
+cmd = "sd '(?m)^version = \"[^\"]+\"' 'version = \"'\"$VERSION\"'\"' Cargo.toml pixi.toml"
+description = "Set an explicit version in both Cargo.toml and pixi.toml (pass VERSION=x.y.z)"
+
+[tasks.bump-alpha]
+cmd = "cargo set-version --bump patch && pixi run sync-version"
+description = "Bump the patch version and sync it to pixi.toml"
+
+[dependencies]
+rust = ">=1.85"
+gh = ">=2.86"
+cargo-edit = ">=0.13"
+dasel = ">=3.2"
+sd = ">=1"

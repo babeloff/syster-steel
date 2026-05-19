@@ -1,0 +1,173 @@
+= The SysML v2 → PlantUML → SVG pipeline
+:description: Architecture of the model-to-diagram transformation pipeline
+:icons: font
+
+== Overview
+
+----
+SysML v2 text file
+        │
+        │  syster/parse-file          (steel-core Engine::run)
+        ▼
+   SysmlModel (HIR)
+        │
+        │  syster/file-symbols
+        ▼
+   list of HirSymbol
+        │
+        │  Steel script (filter + transform)
+        ▼
+   PlantUML source (.puml)
+        │
+        │  plantuml -svg
+        ▼
+   SVG / PNG / PDF
+----
+
+Each stage is independent and composable.
+You can stop at any point —
+for example, to inspect the symbol list before generating PlantUML,
+or to post-process the `.puml` source before rendering.
+
+== Stage 1: Parsing — `syster/parse-file`
+
+The Rust function `syster/parse-file` is registered with the embedded `Engine`
+and invokes syster-base's parser pipeline:
+
+. The *lexer* (logos) tokenises the source text.
+. The *parser* builds a rowan Concrete Syntax Tree (CST).
+. The *AST layer* wraps CST nodes in typed structs (`Definition`, `Usage`, …).
+. *HIR extraction* (Salsa queries) flattens the tree into `HirSymbol` values
+  and resolves qualified names where possible.
+
+The resulting `SysmlModel` is an opaque handle wrapping the Salsa database.
+Multiple calls to `syster/parse-file` return independent model values;
+they do not share state.
+
+== Stage 2: Symbol extraction — `syster/file-symbols`
+
+`syster/file-symbols` runs `extract_symbols_unified` from syster-base,
+which returns all `HirSymbol` values in definition order.
+The list is flat: nesting is encoded in qualified names, not in a tree structure.
+
+Filtering is the first job of the Steel script.
+
+[source,scheme]
+----
+; Only part definitions
+(filter (lambda (s) (string=? (hir-symbol/kind s) "PartDefinition")) syms)
+
+; Everything under one package
+(filter (lambda (s)
+          (starts-with? (hir-symbol/qualified-name s) "VehicleModel::"))
+        syms)
+
+; Elements exposed by a specific view
+(define (exposed-by? sym view-sym)
+  (let ([exposes (hir-symbol/view-expose view-sym)])
+    (any (lambda (path)
+           (starts-with? (hir-symbol/qualified-name sym) path))
+         exposes)))
+----
+
+== Stage 3: PlantUML generation
+
+Each diagram type is a mapping from a filtered symbol list to a PlantUML source string.
+PlantUML's text format is line-oriented,
+so `string-append` and `map` are the core operations.
+
+=== Block Definition Diagram
+
+Selects `PartDefinition` and `PortDefinition` symbols,
+renders each as a PlantUML `class` with `<<block>>` stereotype,
+and derives composition lines from `PartUsage` relationships.
+
+[source,text]
+----
+@startuml
+class "VehicleSystem" <<block>> {
+  + mass : Real
+  ~ drivePort
+}
+class "Engine" <<block>> { … }
+"VehicleSystem" *-- "Engine" : engine
+@enduml
+----
+
+=== Internal Block Diagram
+
+Selects a single `PartDefinition`,
+renders its `PartUsage` children as components,
+and maps `ConnectionUsage` entries to connector lines.
+
+[source,text]
+----
+@startuml
+component "engine : Engine" as engine
+component "chassis : Chassis" as chassis
+engine -right-> chassis : driveShaft
+@enduml
+----
+
+=== Package Diagram
+
+Selects `Package` symbols and `Import` relationships,
+rendering packages as namespaces and imports as dashed arrows.
+
+== Stage 4: Rendering — `plantuml`
+
+PlantUML is a Java application that reads `.puml` source and writes image files.
+The Steel script invokes it via `steel/process`:
+
+[source,scheme]
+----
+(run-process (list "plantuml" "-svg" "vehicle-bdd.puml"))
+----
+
+[cols="1,1,3"]
+|===
+| Flag | Format | Notes
+
+| `-svg` | SVG | Scalable; preferred for documentation
+| `-png` | PNG | Raster; good for inline images
+| `-pdf` | PDF | Suitable for print documents
+| `-txt` | ASCII art | Useful for terminals
+|===
+
+== Why PlantUML rather than direct SVG generation?
+
+Generating SVG directly from Steel would require a layout engine.
+Graph layout — routing edges, avoiding overlaps — is a complex problem that
+PlantUML (via Graphviz/Smetana) solves well.
+By generating PlantUML text, the Steel scripts stay simple (string manipulation)
+and delegate the hard part to an established tool.
+
+PlantUML's text format is also human-readable and diffable,
+which is useful when checking diagrams into version control alongside the SysML source.
+
+== View-driven generation
+
+SysML v2 has a first-class concept of *Views* and *Viewpoints*:
+
+* A `ViewDefinition` declares _what_ should appear using `expose` clauses.
+* A `ViewUsage` instantiates a view for a specific scope.
+
+The pipeline can honour these by filtering the symbol list to only those elements
+exposed by the relevant view before calling the PlantUML generator:
+
+[source,scheme]
+----
+(define view-sym (syster/find-by-qname all-syms "VehicleModel::SystemView"))
+(define exposed  (filter (lambda (s) (exposed-by? s view-sym)) all-syms))
+(write-plantuml-file (generate-bdd exposed) "system-view-bdd.puml")
+----
+
+This aligns the generated diagram with the modelling intent,
+rather than dumping every element in the file.
+
+== See also
+
+* xref:steel-as-extension-language.adoc[Why Steel Scheme as the extension language]
+* xref:sysml-model-in-steel.adoc[How SysML models are represented in Steel]
+* xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]
+* xref:../refer/plantuml-procedures.adoc[PlantUML generation procedures reference]

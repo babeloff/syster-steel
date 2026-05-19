@@ -1,0 +1,92 @@
+= How to run a script
+:description: Invocation patterns for running Steel Scheme scripts with syster-steel
+:icons: font
+
+== Run a single script file
+
+----
+syster-steel my-script.scm
+----
+
+The embedded `Engine` loads the file, executes it top-to-bottom, and exits.
+
+== Run multiple scripts in order
+
+----
+syster-steel setup.scm main.scm cleanup.scm
+----
+
+All scripts share a single `Engine` instance,
+so definitions from earlier scripts are visible to later ones.
+This is the standard way to split reusable library code from the entry point.
+
+== Evaluate an inline expression
+
+----
+syster-steel -e "(displayln (+ 1 2))"
+----
+
+The expression is evaluated before any script files.
+Combine with a script to inject configuration:
+
+----
+syster-steel -e "(define output-format \"svg\")" generate-bdd.scm
+----
+
+== Run a script then keep the REPL open
+
+----
+syster-steel -i my-script.scm
+----
+
+All definitions from the script remain in scope in the REPL.
+Useful for interactive exploration or debugging.
+
+== Run multiple scripts then drop into the REPL
+
+----
+syster-steel -i lib.scm main.scm
+----
+
+== Add a module search directory
+
+Steel resolves `(require "module.scm")` relative to the current directory by default.
+Add extra directories with `-L`:
+
+----
+syster-steel -L /usr/share/syster-steel/wisdom/refer my-script.scm
+----
+
+Multiple `-L` flags are cumulative.
+The search path is passed directly to `Engine::add_search_directory` before any
+scripts are run.
+
+== Typical project layout
+
+----
+project/
+├── lib/
+│   ├── model.scm        ; domain helpers
+│   └── plantuml.scm     ; diagram generation
+├── generate.scm         ; entry point
+└── vehicle.sysml
+----
+
+Run with:
+
+----
+syster-steel -L lib generate.scm
+----
+
+Inside `generate.scm`:
+
+[source,scheme]
+----
+(require "model.scm")
+(require "plantuml.scm")
+----
+
+== See also
+
+* xref:../refer/cli.adoc[CLI reference] — full flag listing
+* xref:../explain/steel-as-extension-language.adoc[Why Steel Scheme] — how the embedded engine works

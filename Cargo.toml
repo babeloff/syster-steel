@@ -1,0 +1,23 @@
+[package]
+name = "syster-steel"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Fredrick Eisele <fred.eisele@vanderbilt.edu>"]
+license = "MIT"
+description = "SysML v2 scripting via Steel Scheme"
+
+[[bin]]
+name = "syster-steel"
+path = "src/main.rs"
+
+[dependencies]
+steel-core = "0.8.2"
+clap = { version = "4", features = ["derive"] }
+rustyline = "14"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "5"
+
+[dev-dependencies]

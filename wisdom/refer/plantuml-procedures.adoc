@@ -1,0 +1,233 @@
+= PlantUML generation procedures reference
+:description: Complete reference for the plantuml.scm Steel library
+:icons: font
+
+The `plantuml.scm` library lives at `wisdom/refer/plantuml.scm`.
+Load it with:
+
+[source,scheme]
+----
+(require "syster/base")
+(require "plantuml")              ; if plantuml.scm is on the load path
+; or
+(require "wisdom/refer/plantuml.scm")
+----
+
+All procedures that generate diagrams accept an optional `opts` hash as their
+last argument.
+Omitting it uses the defaults shown in the tables below.
+
+== Diagram generators
+
+=== `(generate-bdd symbols [opts])` → string
+
+Generate a Block Definition Diagram from a list of `HirSymbol` values.
+
+Selects `PartDefinition`, `PortDefinition`, and `AttributeDefinition` symbols.
+Renders each definition as a PlantUML `class` with the `<<block>>` stereotype.
+Derives composition lines from `PartUsage` children.
+Derives inheritance lines from `Specializes` relationships.
+
+[source,scheme]
+----
+(define puml-text (generate-bdd (syster/file-symbols model)))
+----
+
+[cols="2,1,1,3"]
+|===
+| Key | Type | Default | Effect
+
+| `"title"` | string or `#f` | `#f` | Add a `title` directive
+| `"show-attrs"` | boolean | `#t` | Include `AttributeUsage` in class boxes
+| `"show-ports"` | boolean | `#t` | Include `PortUsage` in class boxes
+| `"show-doc"` | boolean | `#f` | Add documentation as a `note`
+| `"theme"` | string | `"default"` | PlantUML `!theme` directive
+| `"attr-visibility"` | string | `"+"` | Visibility prefix for attributes
+| `"port-visibility"` | string | `"~"` | Visibility prefix for ports
+|===
+
+=== `(generate-ibd parent-sym symbols [opts])` → string
+
+Generate an Internal Block Diagram showing the interior of `parent-sym`.
+
+Selects `PartUsage` and `PortUsage` children of `parent-sym`.
+Renders each part as a component.
+Selects `ConnectionUsage` symbols for connector lines.
+
+[source,scheme]
+----
+(define vs   (syster/find-by-name symbols "VehicleSystem"))
+(define puml (generate-ibd vs symbols))
+----
+
+[cols="2,1,1,3"]
+|===
+| Key | Type | Default | Effect
+
+| `"title"` | string or `#f` | `#f` | Diagram title
+| `"show-ports"` | boolean | `#t` | Render port boxes on components
+| `"direction"` | string | `"left to right direction"` | Diagram flow direction
+|===
+
+=== `(generate-package-diagram symbols [opts])` → string
+
+Generate a package diagram showing packages and import relationships.
+
+Selects `Package` symbols and `Import` entries.
+
+[source,scheme]
+----
+(define puml (generate-package-diagram (syster/file-symbols model)))
+----
+
+=== `(generate-state-machine sym symbols [opts])` → string
+
+Generate a state machine diagram for a `StateDefinition` symbol.
+
+Selects `StateUsage` and `TransitionUsage` children of `sym`.
+
+[source,scheme]
+----
+(define op-state (syster/find-by-name symbols "OperationalState"))
+(define puml     (generate-state-machine op-state symbols))
+----
+
+=== `(generate-sequence-diagram sym symbols [opts])` → string
+
+Generate a sequence / interaction diagram for an `ActionDefinition` or
+`Interaction` symbol.
+
+Selects `ActionUsage`, `SendActionUsage`, and `AcceptActionUsage` members.
+
+=== `(generate-use-case-diagram symbols [opts])` → string
+
+Generate a use case diagram.
+
+Selects `UseCaseDefinition` and `UseCaseUsage` symbols;
+renders actors from `ViewpointDefinition` stakeholders.
+
+== File output
+
+=== `(write-plantuml-file text path)` → void
+
+Write `text` (a PlantUML source string) to `path`,
+creating or overwriting the file.
+
+[source,scheme]
+----
+(write-plantuml-file (generate-bdd symbols) "out/vehicle-bdd.puml")
+----
+
+== Rendering
+
+=== `(render-diagram puml-path format)` → void
+
+Invoke `plantuml` to render `puml-path`.
+`format` is a string: `"svg"`, `"png"`, `"pdf"`, or `"txt"`.
+Output is written next to the `.puml` file.
+
+[source,scheme]
+----
+(render-diagram "out/vehicle-bdd.puml" "svg")
+----
+
+=== `(render-diagram-to puml-path format output-dir)` → void
+
+Render `puml-path` and write the output to `output-dir`.
+
+[source,scheme]
+----
+(render-diagram-to "vehicle-bdd.puml" "svg" "docs/images")
+----
+
+=== `(render-and-open puml-path format)` → void
+
+Render the diagram and open the result in the system default viewer.
+Uses `xdg-open` on Linux.
+
+== Utilities
+
+=== `(symbol->class-block sym)` → string
+
+Render a single `HirSymbol` as a PlantUML class block with `<<block>>` stereotype.
+Used internally by `generate-bdd`; useful for custom generators.
+
+[source,scheme]
+----
+(displayln (symbol->class-block (syster/find-by-name symbols "Engine")))
+----
+
+Output:
+
+[source,text]
+----
+class "Engine" <<block>> {
+  + power : Real
+  ~ fuelIn
+  ~ driveOut
+}
+----
+
+=== `(composition-line parent-name part-sym)` → string
+
+Return the PlantUML composition line for a part usage.
+
+[source,scheme]
+----
+(composition-line "VehicleSystem" part-usage-sym)
+; => "\"VehicleSystem\" *-- \"Engine\" : engine\n"
+----
+
+=== `(inheritance-line child-sym)` → string or `#f`
+
+Return the PlantUML inheritance line for a symbol with a `Specializes`
+relationship, or `#f` if none.
+
+=== `(plantuml-header [title] [theme])` → string
+
+Return the `@startuml … skinparam …` preamble.
+
+=== `(plantuml-footer)` → string
+
+Return `"@enduml\n"`.
+
+== Complete example
+
+[source,scheme]
+----
+(require "syster/base")
+(require "plantuml")
+(require-builtin steel/filesystem)
+
+(define model   (syster/parse-file "vehicle.sysml"))
+(define symbols (syster/file-symbols model))
+
+(unless (path-exists? "out")
+  (create-directory! "out"))
+
+; BDD for the whole model
+(write-plantuml-file
+  (generate-bdd symbols
+    (hash "title" "Vehicle System — Block Definition Diagram"
+          "theme" "plain"))
+  "out/vehicle-bdd.puml")
+(render-diagram "out/vehicle-bdd.puml" "svg")
+
+; IBD for VehicleSystem
+(define vs (syster/find-by-name symbols "VehicleSystem"))
+(write-plantuml-file
+  (generate-ibd vs symbols
+    (hash "title" "VehicleSystem — Internal Block Diagram"))
+  "out/vehicle-ibd.puml")
+(render-diagram "out/vehicle-ibd.puml" "svg")
+
+(displayln "Done — diagrams written to out/")
+----
+
+== See also
+
+* xref:syster-base-bindings.adoc[syster-base Steel bindings reference]
+* xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]
+* xref:../instruct/render-diagrams.adoc[How to render diagrams]
+* xref:../tutor/03-generating-a-plantuml-diagram.adoc[Tutorial 3 — end-to-end walkthrough]
+* xref:../explain/plantuml-pipeline.adoc[The SysML → PlantUML → SVG pipeline]

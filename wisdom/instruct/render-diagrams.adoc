@@ -1,0 +1,122 @@
+= How to render PlantUML diagrams
+:description: Rendering .puml files to SVG, PNG, and PDF using plantuml
+:icons: font
+
+== Prerequisites
+
+`plantuml` must be on your `PATH`.
+Verify:
+
+----
+plantuml -version
+----
+
+If it is not installed, on a pixi/conda environment:
+
+----
+pixi add plantuml
+----
+
+== Render a single file to SVG (recommended for SysML views)
+
+[source,scheme]
+----
+(require-builtin steel/process)
+
+(run-process (list "plantuml" "-svg" "vehicle-bdd.puml"))
+----
+
+Produces `vehicle-bdd.svg` in the same directory as the `.puml` file.
+
+== Render to PNG
+
+[source,scheme]
+----
+(run-process (list "plantuml" "-png" "vehicle-bdd.puml"))
+----
+
+== Render to PDF
+
+[source,scheme]
+----
+(run-process (list "plantuml" "-pdf" "vehicle-bdd.puml"))
+----
+
+== Specify the output directory
+
+[source,scheme]
+----
+(run-process (list "plantuml" "-svg" "-o" "out/" "vehicle-bdd.puml"))
+----
+
+The directory must already exist.
+Create it first if needed:
+
+[source,scheme]
+----
+(require-builtin steel/filesystem)
+
+(unless (path-exists? "out")
+  (create-directory! "out"))
+(run-process (list "plantuml" "-svg" "-o" "out/" "vehicle-bdd.puml"))
+----
+
+== Render all `.puml` files in a directory
+
+[source,scheme]
+----
+(require-builtin steel/filesystem)
+(require-builtin steel/process)
+
+(define (render-all! dir format)
+  (let ([files (glob (string-append dir "/*.puml"))])
+    (for-each
+      (lambda (f)
+        (displayln (string-append "Rendering " f " ..."))
+        (run-process (list "plantuml"
+                           (string-append "-" format)
+                           "-o" dir f)))
+      files)))
+
+(render-all! "out" "svg")
+----
+
+== Use a helper from the plantuml library
+
+[source,scheme]
+----
+(require "plantuml")
+
+(render-diagram "vehicle-bdd.puml" "svg")
+(render-diagram "vehicle-bdd.puml" "png")
+----
+
+To render and open in the default viewer (Linux):
+
+[source,scheme]
+----
+(render-and-open "vehicle-bdd.puml" "svg")
+----
+
+== Set diagram size for large models
+
+PlantUML limits output size by default.
+For large SysML views:
+
+----
+plantuml -svg -DPLANTUML_LIMIT_SIZE=16384 vehicle-bdd.puml
+----
+
+From Steel:
+
+[source,scheme]
+----
+(run-process (list "plantuml" "-svg"
+                   "-DPLANTUML_LIMIT_SIZE=16384"
+                   "vehicle-bdd.puml"))
+----
+
+== See also
+
+* xref:generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]
+* xref:../refer/plantuml-procedures.adoc[PlantUML generation procedures reference]

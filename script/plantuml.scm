@@ -312,13 +312,15 @@
 
 ;; ── Rendering ─────────────────────────────────────────────────────────────────
 
+(define *plantuml-env* "JAVA_TOOL_OPTIONS=-Djava.awt.headless=true")
+
 (define (render-diagram puml-path format)
   "Invoke plantuml to render puml-path.  format: svg | png | pdf | txt."
-  (system (string-append "plantuml -t" format " " puml-path)))
+  (system (string-append *plantuml-env* " plantuml -t" format " " puml-path)))
 
 (define (render-diagram-to puml-path format output-dir)
   "Render puml-path and write output to output-dir."
-  (system (string-append "plantuml -t" format " -o " output-dir " " puml-path)))
+  (system (string-append *plantuml-env* " plantuml -t" format " -o " output-dir " " puml-path)))
 
 (define (render-and-open puml-path format)
   "Render the diagram and open the result with xdg-open."

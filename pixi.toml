@@ -45,6 +45,10 @@ description = "Set an explicit version in both Cargo.toml and pixi.toml (pass VE
 cmd = "cargo set-version --bump patch && pixi run sync-version"
 description = "Bump the patch version and sync it to pixi.toml"
 
+[tasks.clean]
+cmd = "rm -rf output/"
+description = "Remove stale rattler-build output packages"
+
 [tasks.package]
 cmd = "rattler-build build --recipe recipe.yaml"
 description = "Build conda packages from recipe.yaml into output/"
@@ -59,7 +63,7 @@ cmd = "cargo run -- -L script script/gen-plantuml.scm"
 description = "Generate PlantUML diagrams from data/campaign/ into render/"
 
 [tasks.render]
-cmd = "plantuml -tsvg render/*.puml && plantuml -tpng render/*.puml"
+cmd = "JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tsvg render/*.puml && JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tpng render/*.puml"
 depends-on = ["gen-diagrams"]
 description = "Generate diagrams from data/campaign/ then render all .puml files to SVG and PNG"
 

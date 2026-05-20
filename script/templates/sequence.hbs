@@ -1,0 +1,10 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{{theme}}}
+{{#each participants}}
+participant "{{{name}}}" as {{{alias}}}
+{{/each}}
+{{#each messages}}
+{{{source_alias}}} -> {{{target_alias}}} : {{{name}}}
+{{/each}}
+@enduml

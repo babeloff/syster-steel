@@ -4,3 +4,5 @@
 target/
 output/
 render/
+wisdom/diagrams-gen/*.puml
+wisdom/diagrams-gen/*.png

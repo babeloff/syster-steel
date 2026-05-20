@@ -1,11 +1,17 @@
 ;; plantuml.scm — PlantUML diagram generation via Handlebars templates
 ;;
+;; All generators are defined inline so that closures only reference names
+;; within this module's own scope — Steel closures store name references,
+;; not captured values, so cross-module captures do not work.
+;;
+;; Sub-library files (plantuml-action.scm etc.) exist for standalone use
+;; with an explicit hbs registry parameter; do not require them here.
+;;
 ;; Load with:
 ;;   (require "plantuml.scm")         ; if script/ is on the load path (-L script)
 ;;   (require "script/plantuml.scm") ; from project root
 ;;
-;; Templates are loaded from *templates-dir* (default: "script/templates/") relative
-;; to the process working directory.  Override before the first require:
+;; Override the templates directory before the first require:
 ;;   (define *templates-dir* "path/to/templates")
 
 (provide
@@ -15,19 +21,45 @@
 
   ;; PlantUML identifier helpers
   pu-alias
+  pu-safe-char?
+  user-visible?
 
-  ;; Diagram generators (return PlantUML source strings)
+  ;; Symbol/relationship utilities (re-exported from sysml-util.scm)
+  filter-kind
+  filter-kinds
+  filter-map
+  find-syster-by-name
+  find-rel
+  find-rels
+  rel-targets
+  hash-try-get
+
+  ;; Structural diagram generators
   generate-bdd
   generate-ibd
-  generate-viewpoints-diagram
   generate-package-diagram
+  generate-viewpoints-diagram
+
+  ;; Behavioral diagram generators
   generate-state-machine
+  generate-action-flow
+  generate-action-flow-all
+
+  ;; Requirement diagram generators
+  generate-requirement-diagram
+  generate-requirement-diagram-scoped
+
+  ;; Interaction diagram generators
+  generate-sequence-diagram
+  generate-use-case-diagram
 
   ;; File output and rendering
   write-plantuml-file
   render-diagram
   render-diagram-to
   render-and-open)
+
+(require "sysml-util.scm")
 
 ;; ── Template registry ─────────────────────────────────────────────────────────
 
@@ -45,7 +77,12 @@
           (list "ibd"           "ibd.hbs")
           (list "state-machine" "state-machine.hbs")
           (list "package"       "package.hbs")
-          (list "viewpoints"    "viewpoints.hbs"))))
+          (list "viewpoints"    "viewpoints.hbs")
+          (list "action-flow"   "action-flow.hbs")
+          (list "requirement"   "requirement.hbs")
+          (list "sequence"      "sequence.hbs")
+          (list "use-case"      "use-case.hbs")
+          (list "allocation"    "allocation.hbs"))))
 
 (hbs-init! *templates-dir*)
 
@@ -58,8 +95,6 @@
         (and (>= n 48) (<= n 57))    ; 0-9
         (= n 95))))                  ; _
 
-;; True for symbols whose names start with '<' — Steel internal representations
-;; that leak through when a SysML element has no user-visible name.
 (define (user-visible? sym)
   (let ([name (hir-symbol/name sym)])
     (or (= (string-length name) 0)
@@ -104,7 +139,6 @@
                       "StateDefinition" "RequirementDefinition"
                       "EnumerationDefinition")]
          [defs      (filter-kinds symbols def-kinds)]
-         ;; per-definition data: name, alias, is_abstract, attrs, ports
          [def-data
            (map (lambda (def)
                   (let* ([children (syster/children-of symbols def)]
@@ -116,7 +150,6 @@
                           "attrs" (map (lambda (a) (hash "name" (hir-symbol/name a))) attrs)
                           "ports" (map (lambda (p) (hash "name" (hir-symbol/name p))) ports))))
                 defs)]
-         ;; inheritance: supertypes → child
          [inherit-data
            (filter-map
              (lambda (def)
@@ -128,7 +161,6 @@
                            "child"        (hir-symbol/name def)
                            "child_alias"  (pu-alias (hir-symbol/name def))))))
              defs)]
-         ;; composition: PartUsage children typed by another def
          [comp-data
            (apply append
              (map (lambda (def)
@@ -234,7 +266,7 @@
                                              #f))
                                        children))))
                 packages)]
-         ;; Merge packages that share the same name (one per source file otherwise).
+         ;; Merge packages that share the same name (one per source file).
          [merged-data
            (let loop ([pkgs pkg-data] [acc '()])
              (if (null? pkgs)
@@ -301,6 +333,247 @@
                      "instantiations"   instantiations
                      "render_edges"     render-edges)])
     (hbs/render *hbs* "viewpoints" data)))
+
+;; ── Action Flow Diagram ───────────────────────────────────────────────────────
+
+(define (generate-action-flow sym all-symbols . opt-args)
+  "Generate a PlantUML action-flow diagram for an ActionDefinition symbol.
+   Corresponds to VAction + VActionMembers in the Java pilot."
+  (let* ([opts     (if (and (not (null? opt-args)) (hash? (car opt-args)))
+                       (car opt-args)
+                       (hash))]
+         [title    (or (hash-try-get opts "title")
+                       (string-append (hir-symbol/name sym) " Action Flow"))]
+         [theme    (or (hash-try-get opts "theme") "plain")]
+         [children (syster/children-of all-symbols sym)]
+         [actions  (filter user-visible?
+                           (filter-kinds children
+                                         '("ActionUsage" "PerformActionUsage"
+                                           "SendActionUsage" "AcceptActionUsage")))]
+         [trans    (filter-kind children "TransitionUsage")]
+         [initial  (if (null? actions)
+                       ""
+                       (pu-alias (hir-symbol/name (car actions))))]
+         [final    (if (null? actions)
+                       #f
+                       (let ([last (car (reverse actions))])
+                         (hash "name"  (hir-symbol/name last)
+                               "alias" (pu-alias (hir-symbol/name last)))))]
+         [action-data
+           (map (lambda (a)
+                  (hash "name"  (hir-symbol/name a)
+                        "alias" (pu-alias (hir-symbol/name a))))
+                actions)]
+         [trans-data
+           (filter-map
+             (lambda (t)
+               (let ([src-rel (find-rel (hir-symbol/relationships t) "References")]
+                     [tgt-rel (find-rel (hir-symbol/relationships t) "TypedBy")])
+                 (if (and src-rel tgt-rel)
+                     (hash "source"       (hir-rel/target src-rel)
+                           "source_alias" (pu-alias (hir-rel/target src-rel))
+                           "target"       (hir-rel/target tgt-rel)
+                           "target_alias" (pu-alias (hir-rel/target tgt-rel))
+                           "guard"        (hir-symbol/name t))
+                     #f)))
+             trans)]
+         [data (hash "title"              title
+                     "theme"              theme
+                     "initial_action"     initial
+                     "final_action"       (if final (hash-ref final "name") #f)
+                     "final_action_alias" (if final (hash-ref final "alias") #f)
+                     "actions"            action-data
+                     "transitions"        trans-data)])
+    (hbs/render *hbs* "action-flow" data)))
+
+(define (generate-action-flow-all symbols . opt-args)
+  "Generate action flow diagrams for every ActionDefinition in symbols.
+   Returns a list of (name . puml-string) pairs."
+  (let ([action-defs (filter-kinds symbols '("ActionDefinition"))])
+    (filter-map
+      (lambda (def)
+        (let ([children (syster/children-of symbols def)])
+          (if (null? (filter-kinds children '("ActionUsage" "PerformActionUsage")))
+              #f
+              (cons (hir-symbol/name def)
+                    (apply generate-action-flow def symbols opt-args)))))
+      action-defs)))
+
+;; ── Requirement Diagram ───────────────────────────────────────────────────────
+
+(define *req-def-kinds*
+  '("RequirementDefinition" "SatisfactionRequirementDefinition"
+    "VerificationCaseDefinition"))
+
+(define *req-usage-kinds*
+  '("RequirementUsage" "SatisfactionRequirementUsage"))
+
+(define (req-stereotype sym)
+  (if (member (hir-symbol/kind sym) *req-def-kinds*) "requirementDef" "requirement"))
+
+(define (generate-requirement-diagram symbols . opt-args)
+  "Generate a PlantUML requirement diagram.
+   Corresponds to VRequirement + VCompartment in the Java pilot."
+  (let* ([opts      (if (and (not (null? opt-args)) (hash? (car opt-args)))
+                        (car opt-args)
+                        (hash))]
+         [title     (or (hash-try-get opts "title") "Requirement Diagram")]
+         [theme     (or (hash-try-get opts "theme") "plain")]
+         [req-syms  (filter user-visible?
+                            (filter-kinds symbols
+                                          (append *req-def-kinds* *req-usage-kinds*)))]
+         [req-data  (map (lambda (sym)
+                           (hash "name"       (hir-symbol/name sym)
+                                 "alias"      (pu-alias (hir-symbol/name sym))
+                                 "stereotype" (req-stereotype sym)))
+                         req-syms)]
+         [contain-data
+           (filter-map
+             (lambda (sym)
+               (let ([supers (hir-symbol/supertypes sym)])
+                 (if (null? supers)
+                     #f
+                     (hash "parent_alias" (pu-alias (car supers))
+                           "child_alias"  (pu-alias (hir-symbol/name sym))))))
+             req-syms)]
+         [derive-data
+           (apply append
+             (map (lambda (sym)
+                    (map (lambda (tgt)
+                           (hash "source_alias" (pu-alias (hir-symbol/name sym))
+                                 "target_alias" (pu-alias tgt)))
+                         (rel-targets sym "DeriveReqt")))
+                  req-syms))]
+         [satisfy-data
+           (apply append
+             (map (lambda (sym)
+                    (map (lambda (tgt)
+                           (hash "satisfier_alias"   (pu-alias (hir-symbol/name sym))
+                                 "requirement_alias" (pu-alias tgt)))
+                         (rel-targets sym "Satisfy")))
+                  req-syms))]
+         [refine-data
+           (apply append
+             (map (lambda (sym)
+                    (map (lambda (tgt)
+                           (hash "source_alias" (pu-alias (hir-symbol/name sym))
+                                 "target_alias" (pu-alias tgt)))
+                         (rel-targets sym "Refine")))
+                  req-syms))]
+         [data (hash "title"         title
+                     "theme"         theme
+                     "requirements"  req-data
+                     "contain_edges" contain-data
+                     "derive_edges"  derive-data
+                     "satisfy_edges" satisfy-data
+                     "refine_edges"  refine-data)])
+    (hbs/render *hbs* "requirement" data)))
+
+(define (generate-requirement-diagram-scoped sym all-symbols . opt-args)
+  "Generate a requirement diagram scoped to the children of sym."
+  (let ([children (filter user-visible?
+                          (filter-kinds (syster/children-of all-symbols sym)
+                                        (append *req-def-kinds* *req-usage-kinds*)))])
+    (apply generate-requirement-diagram children opt-args)))
+
+;; ── Sequence Diagram ──────────────────────────────────────────────────────────
+
+(define (generate-sequence-diagram sym all-symbols . opt-args)
+  "Generate a PlantUML sequence diagram for an interaction context sym.
+   Corresponds to VSequence in the Java pilot (simplified, declaration order)."
+  (let* ([opts      (if (and (not (null? opt-args)) (hash? (car opt-args)))
+                        (car opt-args)
+                        (hash))]
+         [title     (or (hash-try-get opts "title")
+                        (string-append (hir-symbol/name sym) " Sequence"))]
+         [theme     (or (hash-try-get opts "theme") "plain")]
+         [children  (syster/children-of all-symbols sym)]
+         [participants (filter user-visible?
+                               (filter-kinds children
+                                             '("PartUsage" "ItemUsage" "OccurrenceUsage")))]
+         [connections  (filter user-visible?
+                               (filter-kinds children
+                                             '("ConnectionUsage" "FlowUsage" "MessageUsage")))]
+         [part-data
+           (map (lambda (p)
+                  (hash "name"  (hir-symbol/name p)
+                        "alias" (pu-alias (hir-symbol/name p))))
+                participants)]
+         [msg-data
+           (filter-map
+             (lambda (conn)
+               (let* ([ends      (syster/children-of all-symbols conn)]
+                      [end-names (map hir-symbol/name (filter user-visible? ends))]
+                      [n         (length end-names)])
+                 (if (>= n 2)
+                     (hash "name"         (hir-symbol/name conn)
+                           "source_alias" (pu-alias (car end-names))
+                           "target_alias" (pu-alias (cadr end-names)))
+                     #f)))
+             connections)]
+         [data (hash "title"        title
+                     "theme"        theme
+                     "participants" part-data
+                     "messages"     msg-data)])
+    (hbs/render *hbs* "sequence" data)))
+
+;; ── Use Case Diagram ──────────────────────────────────────────────────────────
+
+(define *uc-kinds*
+  '("UseCaseDefinition" "UseCaseUsage" "CaseDefinition" "CaseUsage"))
+
+(define *actor-kinds*
+  '("ActorUsage" "ActorDefinition"))
+
+(define (generate-use-case-diagram symbols . opt-args)
+  "Generate a PlantUML use case diagram.
+   Corresponds to VCase + VCaseMembers in the Java pilot."
+  (let* ([opts        (if (and (not (null? opt-args)) (hash? (car opt-args)))
+                          (car opt-args)
+                          (hash))]
+         [title       (or (hash-try-get opts "title") "Use Case Diagram")]
+         [theme       (or (hash-try-get opts "theme") "plain")]
+         [system-name (or (hash-try-get opts "system_name") "System")]
+         [uc-syms     (filter user-visible? (filter-kinds symbols *uc-kinds*))]
+         [actor-syms  (filter user-visible? (filter-kinds symbols *actor-kinds*))]
+         [uc-data     (map (lambda (uc)
+                             (hash "name"  (hir-symbol/name uc)
+                                   "alias" (pu-alias (hir-symbol/name uc))))
+                           uc-syms)]
+         [actor-data  (map (lambda (a)
+                             (hash "name"  (hir-symbol/name a)
+                                   "alias" (pu-alias (hir-symbol/name a))))
+                           actor-syms)]
+         [uc-names    (map hir-symbol/name uc-syms)]
+         [actor-edges
+           (apply append
+             (map (lambda (actor)
+                    (filter-map
+                      (lambda (tgt)
+                        (if (member tgt uc-names)
+                            (hash "actor_alias"    (pu-alias (hir-symbol/name actor))
+                                  "use_case_alias" (pu-alias tgt))
+                            #f))
+                      (rel-targets actor "References")))
+                  actor-syms))]
+         [include-edges
+           (filter-map
+             (lambda (uc)
+               (let ([supers (hir-symbol/supertypes uc)])
+                 (if (null? supers)
+                     #f
+                     (hash "source_alias" (pu-alias (hir-symbol/name uc))
+                           "target_alias" (pu-alias (car supers))))))
+             uc-syms)]
+         [data (hash "title"         title
+                     "theme"         theme
+                     "system_name"   system-name
+                     "actors"        actor-data
+                     "use_cases"     uc-data
+                     "actor_edges"   actor-edges
+                     "include_edges" include-edges
+                     "extend_edges"  '())])
+    (hbs/render *hbs* "use-case" data)))
 
 ;; ── File output ───────────────────────────────────────────────────────────────
 

@@ -1,0 +1,22 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{{theme}}}
+left to right direction
+{{#each actors}}
+actor "{{{name}}}" as {{{alias}}}
+{{/each}}
+rectangle "{{{system_name}}}" {
+{{#each use_cases}}
+  usecase "{{{name}}}" as {{{alias}}}
+{{/each}}
+}
+{{#each actor_edges}}
+{{{actor_alias}}} --> {{{use_case_alias}}}
+{{/each}}
+{{#each include_edges}}
+{{{source_alias}}} .> {{{target_alias}}} : <<include>>
+{{/each}}
+{{#each extend_edges}}
+{{{source_alias}}} .> {{{target_alias}}} : <<extend>>
+{{/each}}
+@enduml

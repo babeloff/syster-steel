@@ -1,0 +1,16 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{{theme}}}
+skinparam state {
+  BackgroundColor<<action>> LightYellow
+  BorderColor<<action>> DarkOrange
+}
+[*] --> {{{initial_action}}}
+{{#each actions}}
+state "{{{name}}}" as {{{alias}}} <<action>>
+{{/each}}
+{{#each transitions}}{{{source_alias}}} ..> {{{target_alias}}}{{#if guard}} : {{{guard}}}{{/if}}
+{{/each}}
+{{#if final_action}}{{{final_action_alias}}} --> [*]
+{{/if}}
+@enduml

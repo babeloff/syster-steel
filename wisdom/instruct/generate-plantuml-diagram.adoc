@@ -1,5 +1,5 @@
-= How to generate a PlantUML diagram from a SysML v2 model
-:description: Generating BDD, IBD, package, and state machine diagrams from Steel scripts
+= How to generate PlantUML diagrams from a SysML v2 model
+:description: Generating structural, behavioral, requirement, and interaction diagrams from Steel scripts
 :icons: font
 
 Require the plantuml library at the top of your script.
@@ -8,12 +8,12 @@ needed for them.
 
 [source,scheme]
 ----
-(require "plantuml.scm")          ; from script/plantuml.scm — run with -L script
+(require "plantuml.scm")          ; run with -L script so script/ is on the load path
 ----
 
-`plantuml.scm` loads Handlebars templates from `script/templates/` on startup.
-Run scripts from the project root so the path resolves correctly, or set
-`*templates-dir*` before the first `require`:
+`plantuml.scm` loads all sub-libraries and registers ten Handlebars templates from
+`script/templates/` on startup.  Run scripts from the project root so the path
+resolves correctly, or override the directory before the first `require`:
 
 [source,scheme]
 ----
@@ -21,10 +21,13 @@ Run scripts from the project root so the path resolves correctly, or set
 (require "plantuml.scm")
 ----
 
-== Block Definition Diagram (BDD)
+== Structural diagrams
 
-A BDD shows block definitions, their attributes, ports, and composition relationships.
-It corresponds to a SysML v2 Part Definition tree.
+=== Block Definition Diagram (BDD)
+
+A BDD shows block definitions, their attributes, ports, and composition /
+inheritance relationships.  Pass the full flat symbol list — the generator
+filters by definition kind.
 
 [source,scheme]
 ----
@@ -32,95 +35,180 @@ It corresponds to a SysML v2 Part Definition tree.
 (define symbols (syster/file-symbols model))
 
 (write-plantuml-file
-  (generate-bdd symbols)
-  "vehicle-bdd.puml")
+  (generate-bdd symbols (hash "title" "Vehicle System BDD" "theme" "plain"))
+  "out/vehicle-bdd.puml")
 ----
 
-To filter to a specific package:
+=== Internal Block Diagram (IBD)
 
-[source,scheme]
-----
-(define pkg-syms
-  (filter (lambda (s)
-            (starts-with? (hir-symbol/qualified-name s) "VehicleModel::"))
-          symbols))
-
-(write-plantuml-file (generate-bdd pkg-syms) "vehicle-bdd.puml")
-----
-
-== Internal Block Diagram (IBD)
-
-An IBD shows the internal structure of one block:
-its part usages and port connections.
+An IBD shows the internal structure of one block: its parts and port connections.
 
 [source,scheme]
 ----
 (define vs (syster/find-by-name symbols "VehicleSystem"))
 
 (write-plantuml-file
-  (generate-ibd vs symbols)
-  "vehicle-ibd.puml")
+  (generate-ibd vs symbols (hash "title" "VehicleSystem Interior"))
+  "out/vehicle-ibd.puml")
 ----
 
-== State Machine Diagram
+=== Package diagram
 
-Shows state definitions and transitions within an action or state definition.
-
-[source,scheme]
-----
-(define state-def (syster/find-by-name symbols "OperationalState"))
-
-(write-plantuml-file
-  (generate-state-machine state-def symbols)
-  "operational-state.puml")
-----
-
-== Dependency / package diagram
-
-Shows packages and their import relationships.
+Shows packages and their member elements, merging same-named packages that
+appear in multiple source files.
 
 [source,scheme]
 ----
 (write-plantuml-file
-  (generate-package-diagram symbols)
-  "packages.puml")
+  (generate-package-diagram symbols (hash "title" "Model Packages"))
+  "out/packages.puml")
+----
+
+=== Viewpoints diagram
+
+Shows viewpoints, view definitions, renderings, and their instantiation /
+rendering relationships.
+
+[source,scheme]
+----
+(write-plantuml-file
+  (generate-viewpoints-diagram symbols)
+  "out/viewpoints.puml")
+----
+
+== Behavioral diagrams
+
+=== State machine diagram
+
+Shows state usages and transitions within a `StateDefinition`.
+
+[source,scheme]
+----
+(define state-def (syster/find-by-name symbols "VehicleOperationalState"))
+
+(write-plantuml-file
+  (generate-state-machine state-def symbols
+    (hash "title" "Vehicle Operational State Machine"))
+  "out/vehicle-state.puml")
+----
+
+=== Action flow diagram
+
+Shows action usages and succession/transition relationships within an
+`ActionDefinition`.  Transitions are rendered as dotted `..>` arrows,
+matching the style of the SysML v2 Java pilot implementation.
+
+[source,scheme]
+----
+(define mission (syster/find-by-name symbols "ScoutMission"))
+
+(write-plantuml-file
+  (generate-action-flow mission symbols
+    (hash "title" "Scout Mission Action Flow"))
+  "out/scout-mission.puml")
+----
+
+To generate action flow diagrams for every `ActionDefinition` in the model:
+
+[source,scheme]
+----
+(for-each
+  (lambda (pair)
+    (let ([name (car pair)]
+          [puml (cdr pair)])
+      (write-plantuml-file puml (string-append "out/" name "-flow.puml"))))
+  (generate-action-flow-all symbols))
+----
+
+== Requirement diagrams
+
+Shows requirement definitions and usages as labelled boxes with derivation,
+satisfaction, and refinement relationship arrows.
+
+[source,scheme]
+----
+(write-plantuml-file
+  (generate-requirement-diagram symbols
+    (hash "title" "System Requirements"))
+  "out/requirements.puml")
+----
+
+To scope to a sub-tree:
+
+[source,scheme]
+----
+(define sys-reqs (syster/find-by-name symbols "SystemRequirements"))
+
+(write-plantuml-file
+  (generate-requirement-diagram-scoped sys-reqs symbols)
+  "out/sys-requirements.puml")
+----
+
+== Interaction diagrams
+
+=== Sequence diagram
+
+Shows `PartUsage` / `ItemUsage` children of an interaction context as
+participants and `ConnectionUsage` / `FlowUsage` children as directed messages.
+
+[source,scheme]
+----
+(define interaction (syster/find-by-name symbols "SensorQueryInteraction"))
+
+(write-plantuml-file
+  (generate-sequence-diagram interaction symbols
+    (hash "title" "Sensor Query Sequence"))
+  "out/sensor-sequence.puml")
+----
+
+NOTE: Message ordering follows declaration order.  For models that use
+`Succession` relationships to define ordering, the full topological sort
+from the Java pilot is a planned improvement.
+
+=== Use case diagram
+
+Shows use cases, actors, and their relationships within a system boundary.
+
+[source,scheme]
+----
+(write-plantuml-file
+  (generate-use-case-diagram symbols
+    (hash "title"       "Campaign Use Cases"
+          "system_name" "Campaign System"))
+  "out/use-cases.puml")
 ----
 
 == Customise the output
 
 All generators accept an optional options hash as their last argument:
 
-[source,scheme]
-----
-(write-plantuml-file
-  (generate-bdd symbols
-    (hash "theme" "plain"
-          "title" "Vehicle System BDD"))
-  "vehicle-bdd.puml")
-----
-
 [cols="2,1,1,3"]
 |===
 | Option key | Type | Default | Effect
 
-| `"title"` | string | `""` | Add a `title` directive
-| `"theme"` | string | `"default"` | PlantUML `!theme` directive
-| `"direction"` | string | `"left to right direction"` | IBD layout direction (IBD only)
+| `"title"` | string | (varies) | Add a `title` directive
+| `"theme"` | string | `"plain"` | PlantUML `!theme` directive
+| `"direction"` | string | `"left to right direction"` | IBD layout direction
+| `"system_name"` | string | `"System"` | Use case boundary label
 |===
 
 == Customise the templates
 
 The PlantUML structure is defined by Handlebars templates in `script/templates/`.
-To change how diagrams look — adding `skinparam` directives, reformatting class boxes,
+To change diagram styling — adding `skinparam` directives, reformatting boxes,
 switching relationship notation — edit the relevant `.hbs` file directly.
 
-To use a parallel set of templates without modifying the originals, copy the
-`script/templates/` directory and point `*templates-dir*` at the copy before requiring
-`plantuml`.
+To use a parallel set of templates without modifying the originals:
 
-See xref:../refer/hbs-bindings.adoc[Handlebars Steel bindings reference] for the full
-`hbs/*` API, including how to register additional templates into the shared `*hbs*`
-registry.
+[source,scheme]
+----
+(define *templates-dir* "my/custom/templates")
+(require "plantuml.scm")
+----
+
+See xref:../refer/hbs-bindings.adoc[Handlebars Steel bindings reference] for
+the full `hbs/*` API, including how to register additional templates into the
+shared `*hbs*` registry.
 
 == Write to a specific directory
 
@@ -128,12 +216,16 @@ registry.
 ----
 (require-builtin steel/filesystem)
 
-(create-directory! "out")
-(write-plantuml-file (generate-bdd symbols) "out/vehicle-bdd.puml")
+(unless (path-exists? "out")
+  (create-directory! "out"))
+
+(write-plantuml-file (generate-bdd symbols)           "out/vehicle-bdd.puml")
+(write-plantuml-file (generate-requirement-diagram symbols) "out/requirements.puml")
 ----
 
 == See also
 
 * xref:render-diagrams.adoc[How to render diagrams]
 * xref:../refer/plantuml-procedures.adoc[PlantUML generation procedures reference]
+* xref:../refer/library-structure.adoc[Script library structure]
 * xref:../tutor/03-generating-a-plantuml-diagram.adoc[Tutorial 3 — end-to-end walkthrough]

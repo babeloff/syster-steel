@@ -1,0 +1,17 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{{theme}}}
+skinparam component {
+  BackgroundColor LightGray
+  BorderColor DimGray
+}
+{{#each functions}}
+component "{{{name}}}" as {{{alias}}} <<function>>
+{{/each}}
+{{#each resources}}
+component "{{{name}}}" as {{{alias}}} <<resource>>
+{{/each}}
+{{#each allocations}}
+{{{function_alias}}} -[thickness=3,dotted]-> {{{resource_alias}}} : <<allocate>>
+{{/each}}
+@enduml

@@ -59,12 +59,16 @@ With https://pixi.sh[pixi] (recommended):
 
 [source,shell]
 ----
-pixi run build     # debug build
-pixi run test      # run the test suite
-pixi run check     # lint with Clippy
-pixi run repl      # start the REPL via cargo run
-pixi run package   # build conda packages into output/
-pixi run publish   # build and upload to prefix.dev/meso-forge
+pixi run build       # debug build
+pixi run test        # run the test suite
+pixi run check       # lint with Clippy
+pixi run repl        # start the REPL via cargo run
+pixi run gen-diagrams  # generate PlantUML from data/campaign/ into render/
+pixi run render        # generate and render campaign diagrams to SVG + PNG
+pixi run gen-self      # generate self-documenting diagrams from data/self/ into wisdom/diagrams-gen/
+pixi run render-self   # generate and render self-documenting diagrams
+pixi run package     # build conda packages into output/
+pixi run publish     # build and upload to prefix.dev/meso-forge
 ----
 
 `pixi run publish` requires a `PREFIX_API_KEY` environment variable with a
@@ -170,7 +174,7 @@ The `wisdom/` directory follows the https://diataxis.fr/[Diátaxis] framework.
 
 * link:wisdom/instruct/run-a-script.adoc[Run a script]
 * link:wisdom/instruct/load-sysml-model.adoc[Load a SysML model from a file]
-* link:wisdom/instruct/generate-plantuml-diagram.adoc[Generate a PlantUML file from a SysML view]
+* link:wisdom/instruct/generate-plantuml-diagram.adoc[Generate PlantUML diagrams from a SysML view]
 * link:wisdom/instruct/render-diagrams.adoc[Render a PlantUML file to SVG or PNG]
 
 === Explanations — understanding how things work
@@ -186,6 +190,7 @@ The `wisdom/` directory follows the https://diataxis.fr/[Diátaxis] framework.
 * link:wisdom/refer/syster-base-bindings.adoc[syster-base Steel bindings]
 * link:wisdom/refer/hbs-bindings.adoc[Handlebars Steel bindings]
 * link:wisdom/refer/plantuml-procedures.adoc[PlantUML generation procedures]
+* link:wisdom/refer/library-structure.adoc[Script library structure]
 
 == Project layout
 
@@ -198,19 +203,29 @@ syster-steel/
 │   ├── cli.rs         — clap argument definitions
 │   └── repl.rs        — rustyline REPL with multi-line input and history
 ├── script/
-│   ├── plantuml.scm   — Steel library for generating PlantUML diagrams
-│   ├── gen-plantuml.scm — generates all diagrams from data/campaign/
-│   ├── gen-bdd.scm    — standalone BDD generation tutorial script
-│   ├── templates/     — Handlebars templates for each PlantUML diagram type
-│   └── examples/      — tutorial example scripts
+│   ├── sysml-util.scm          — shared utilities (pu-alias, filter-kind, rel-targets, …)
+│   ├── plantuml.scm            — all-in-one library: all generators + *hbs* registry
+│   ├── plantuml-action.scm     — standalone action flow generator (explicit hbs arg)
+│   ├── plantuml-requirement.scm — standalone requirement generator (explicit hbs arg)
+│   ├── plantuml-sequence.scm   — standalone sequence generator (explicit hbs arg)
+│   ├── plantuml-use-case.scm   — standalone use case generator (explicit hbs arg)
+│   ├── gen-plantuml.scm        — batch script: all diagrams from data/campaign/
+│   ├── gen-self-diagrams.scm   — generates self-documenting diagrams from data/self/
+│   ├── gen-bdd.scm             — standalone BDD generation tutorial script
+│   ├── templates/              — Handlebars templates for each diagram type (10 files)
+│   └── examples/               — tutorial example scripts
 ├── data/
 │   ├── campaign/      — SysML v2 campaign model (multi-file)
+│   ├── self/          — SysML v2 self-documenting model for syster-steel itself
 │   └── docs/          — SysML v2 example models used in tutorials
 ├── wisdom/
+│   ├── diagrams-gen/  — generated PlantUML diagrams from data/self/ (pixi run gen-self)
 │   ├── tutor/         — step-by-step tutorials
 │   ├── instruct/      — how-to guides
 │   ├── explain/       — explanations and design rationale
 │   └── refer/         — reference docs
+├── pixi-script/
+│   └── gen-self-diagrams.nu — nushell script: detect syster-steel, run gen-self, optionally render
 ├── Cargo.toml
 ├── pixi.toml          — build tasks and conda environment
 ├── recipe.yaml        — rattler-build conda package recipe

@@ -31,6 +31,8 @@ Each subdirectory serves a distinct purpose and a distinct reader need.
 Scheme scripts (`.scm`) that act as reusable libraries live alongside their
 reference documentation in `refer/`.
 
+image::diagrams-gen/use-cases.svg[syster-steel use cases,width=600,align=center]
+
 NOTE: syster-steel is an *embedded* Steel Scheme engine.
 The `steel-core` crate provides the VM;
 syster-steel adds a CLI, a custom REPL, and domain-specific bindings.

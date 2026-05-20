@@ -201,6 +201,13 @@ with all definitions from `hello.scm` still in scope:
 Because syster-steel uses a single `Engine` instance for the entire session,
 definitions accumulate across scripts and REPL input.
 
+image::../diagrams-gen/lifecycle-state.svg[Tool lifecycle state machine,width=500,align=center]
+
+The diagram above shows the tool's lifecycle:
+the same `Engine` transitions from `Initializing` through `LoadingScript` and
+into either `RunningREPL` (interactive) or `RunningScript` (batch),
+then exits when the session ends.
+
 == 9. Load a script from the REPL
 
 You can load a script file from within a running REPL session without restarting.

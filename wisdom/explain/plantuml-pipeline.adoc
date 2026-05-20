@@ -28,6 +28,8 @@ SysML v2 text file
    SVG / PNG / PDF
 ----
 
+image::../diagrams-gen/pipeline-flow.svg[Diagram generation pipeline action flow,width=600,align=center]
+
 Each stage is independent and composable.
 You can stop at any point —
 for example, to inspect the symbol list before generating PlantUML,

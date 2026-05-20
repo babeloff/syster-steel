@@ -16,6 +16,8 @@ define their own transformations without recompiling the toolchain.
 
 == The embedded engine architecture
 
+image::../diagrams-gen/engine-ibd.svg[RustEngine internal block diagram,width=600,align=center]
+
 syster-steel is a concrete example of
 https://mattwparas.github.io/steel/book/start/embedded.html[using Steel as an embedded scripting engine].
 The `steel-core` crate provides the VM;

@@ -1,0 +1,28 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{{theme}}}
+skinparam rectangle {
+  BackgroundColor<<requirement>> LightBlue
+  BorderColor<<requirement>> DarkBlue
+  FontStyle<<requirement>> Bold
+}
+skinparam rectangle {
+  BackgroundColor<<requirementDef>> AliceBlue
+  BorderColor<<requirementDef>> Navy
+}
+{{#each requirements}}
+rectangle "**{{{name}}}**" as {{{alias}}} <<{{{stereotype}}}>>
+{{/each}}
+{{#each derive_edges}}
+{{{source_alias}}} <.. {{{target_alias}}} : <<deriveReqt>>
+{{/each}}
+{{#each satisfy_edges}}
+{{{satisfier_alias}}} ..|> {{{requirement_alias}}} : <<satisfy>>
+{{/each}}
+{{#each refine_edges}}
+{{{source_alias}}} ..> {{{target_alias}}} : <<refine>>
+{{/each}}
+{{#each contain_edges}}
+{{{parent_alias}}} *-- {{{child_alias}}}
+{{/each}}
+@enduml

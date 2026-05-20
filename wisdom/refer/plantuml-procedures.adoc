@@ -1,38 +1,48 @@
 = PlantUML generation procedures reference
-:description: Complete reference for the plantuml.scm Steel library
+:description: Complete reference for the plantuml.scm Steel library and its sub-libraries
 :icons: font
 
-The `plantuml.scm` library lives at `script/plantuml.scm`.
-Load it with:
+The `script/` directory contains a suite of Steel Scheme libraries for generating
+PlantUML diagrams from SysML v2 models.
+The entry point is `plantuml.scm`, which loads all sub-libraries and exposes a
+unified API.
 
 [source,scheme]
 ----
-(require "plantuml.scm")          ; if script/ is on the load path (-L script)
+(require "plantuml.scm")          ; with -L script on the load path
 ; or
-(require "script/plantuml.scm")
+(require "script/plantuml.scm")   ; from the project root
 ----
 
 The `syster/base` functions (`syster/parse-file`, `hir-symbol/*`, etc.) and the
-`hbs/*` functions are registered automatically — no `require` is needed for them.
+`hbs/*` functions are registered automatically by the Rust host — no `require`
+is needed for them.
 
-On load, `plantuml.scm` creates a shared Handlebars registry `*hbs*` and registers
-the five templates from `*templates-dir*` (default: `"script/templates"`).
+On load, `plantuml.scm` creates a shared Handlebars registry `*hbs*` and
+registers ten templates from `*templates-dir*` (default: `"script/templates"`).
 All diagram generators call `(hbs/render *hbs* ...)` internally.
 
 All procedures that generate diagrams accept an optional `opts` hash as their
-last argument.
-Omitting it uses the defaults shown in the tables below.
+last argument.  Omitting it uses the defaults shown in the tables below.
 
-== Diagram generators
+See xref:library-structure.adoc[Script library structure] for details on loading
+individual sub-libraries independently.
+
+== Structural diagrams
 
 === `(generate-bdd symbols [opts])` → string
 
-Generate a Block Definition Diagram from a list of `HirSymbol` values.
+Generate a Block Definition Diagram from a flat list of `HirSymbol` values.
 
-Selects `PartDefinition`, `PortDefinition`, and `AttributeDefinition` symbols.
+Selects `PartDefinition`, `ItemDefinition`, `AttributeDefinition`,
+`PortDefinition`, `ConnectionDefinition`, `ActionDefinition`,
+`StateDefinition`, `RequirementDefinition`, and `EnumerationDefinition`
+symbols.
 Renders each definition as a PlantUML `class` with the `<<block>>` stereotype.
-Derives composition lines from `PartUsage` children.
+Derives composition lines from `PartUsage` children typed by another definition.
 Derives inheritance lines from `Specializes` relationships.
+
+Corresponds to `VCompartment` / `VTree` in the Java pilot implementation.
 
 [source,scheme]
 ----
@@ -44,7 +54,7 @@ Derives inheritance lines from `Specializes` relationships.
 | Key | Type | Default | Effect
 
 | `"title"` | string | `""` | Add a `title` directive
-| `"theme"` | string | `"default"` | PlantUML `!theme` directive
+| `"theme"` | string | `"plain"` | PlantUML `!theme` directive
 |===
 
 Output structure is controlled by `script/templates/bdd.hbs`.
@@ -53,9 +63,11 @@ Output structure is controlled by `script/templates/bdd.hbs`.
 
 Generate an Internal Block Diagram showing the interior of `parent-sym`.
 
-Selects `PartUsage` and `PortUsage` children of `parent-sym`.
-Renders each part as a component.
-Selects `ConnectionUsage` symbols for connector lines.
+Selects `PartUsage` and `PortUsage` children of `parent-sym`, filtering out
+unnamed internal elements.
+Renders each part as a labelled component with a PlantUML-safe alias.
+
+Corresponds to `VComposite` in the Java pilot implementation.
 
 [source,scheme]
 ----
@@ -68,7 +80,7 @@ Selects `ConnectionUsage` symbols for connector lines.
 | Key | Type | Default | Effect
 
 | `"title"` | string | `""` | Diagram title
-| `"direction"` | string | `"left to right direction"` | Diagram flow direction
+| `"direction"` | string | `"left to right direction"` | Diagram layout direction
 |===
 
 Output structure is controlled by `script/templates/ibd.hbs`.
@@ -77,8 +89,8 @@ Output structure is controlled by `script/templates/ibd.hbs`.
 
 Generate a package diagram showing packages and their contents.
 
-Selects `Package` symbols and their direct children.
-Output structure is controlled by `script/templates/package.hbs`.
+Selects `Package` symbols and their direct children, merging packages that share
+a name (which occurs when multiple source files declare the same package).
 
 [source,scheme]
 ----
@@ -86,21 +98,7 @@ Output structure is controlled by `script/templates/package.hbs`.
 ----
 
 Accepts `"title"` and `"theme"` options.
-
-=== `(generate-state-machine sym symbols [opts])` → string
-
-Generate a state machine diagram for a `StateDefinition` symbol.
-
-Selects `StateUsage` and `TransitionUsage` children of `sym`.
-Output structure is controlled by `script/templates/state-machine.hbs`.
-
-[source,scheme]
-----
-(define op-state (syster/find-by-name symbols "OperationalState"))
-(define puml     (generate-state-machine op-state symbols))
-----
-
-Accepts a `"title"` option; the title defaults to `"<name> State Machine"`.
+Output structure is controlled by `script/templates/package.hbs`.
 
 === `(generate-viewpoints-diagram symbols [opts])` → string
 
@@ -109,7 +107,6 @@ instantiation and rendering relationships.
 
 Selects `ViewpointDefinition`, `ViewDefinition`, `RenderingDefinition`, and
 `ViewUsage` symbols.
-Output structure is controlled by `script/templates/viewpoints.hbs`.
 
 [source,scheme]
 ----
@@ -117,6 +114,160 @@ Output structure is controlled by `script/templates/viewpoints.hbs`.
 ----
 
 Accepts `"title"` and `"theme"` options.
+Output structure is controlled by `script/templates/viewpoints.hbs`.
+
+== Behavioral diagrams
+
+=== `(generate-state-machine sym symbols [opts])` → string
+
+Generate a state machine diagram for a `StateDefinition` symbol.
+
+Selects `StateUsage` and `TransitionUsage` children of `sym`.
+Transitions are rendered as `-->` arrows labelled with the transition name.
+
+Corresponds to `VStateMachine` + `VStateMembers` in the Java pilot
+implementation.
+
+[source,scheme]
+----
+(define op-state (syster/find-by-name symbols "OperationalState"))
+(define puml     (generate-state-machine op-state symbols))
+----
+
+Accepts a `"title"` option; the title defaults to `"<name> State Machine"`.
+Output structure is controlled by `script/templates/state-machine.hbs`.
+
+=== `(generate-action-flow sym symbols [opts])` → string
+
+Generate an action flow diagram for an `ActionDefinition` symbol.
+
+Selects `ActionUsage`, `PerformActionUsage`, `SendActionUsage`, and
+`AcceptActionUsage` children as nodes.
+Selects `TransitionUsage` children as directed edges, rendered as `..>` arrows
+(matching `VAction`'s dotted succession style from the Java pilot).
+
+Corresponds to `VAction` + `VActionMembers` in the Java pilot implementation.
+
+[source,scheme]
+----
+(define mission (syster/find-by-name symbols "ScoutMission"))
+(define puml    (generate-action-flow mission symbols))
+----
+
+Accepts `"title"` (defaults to `"<name> Action Flow"`) and `"theme"` options.
+Output structure is controlled by `script/templates/action-flow.hbs`.
+
+=== `(generate-action-flow-all symbols [opts])` → list of `(name . puml-string)` pairs
+
+Generate action flow diagrams for every `ActionDefinition` that has
+`ActionUsage` children.  Returns a list of pairs for batch processing.
+
+[source,scheme]
+----
+(for-each
+  (lambda (pair)
+    (write-plantuml-file (cdr pair)
+                         (string-append "out/" (car pair) ".puml")))
+  (generate-action-flow-all symbols))
+----
+
+== Requirement diagrams
+
+=== `(generate-requirement-diagram symbols [opts])` → string
+
+Generate a requirement diagram from a flat list of `HirSymbol` values.
+
+Selects `RequirementDefinition` and `RequirementUsage` symbols.
+Renders each as a labelled rectangle with the `<<requirement>>` or
+`<<requirementDef>>` stereotype.
+
+Relationship kinds recognised in `hir-symbol/relationships`:
+
+[cols="1,3"]
+|===
+| Relationship kind | PlantUML line
+
+| `DeriveReqt`  | `source <.. target : <<deriveReqt>>`
+| `Satisfy`     | `satisfier ..\|> requirement : <<satisfy>>`
+| `Refine`      | `source ..> target : <<refine>>`
+| `Specializes` | containment: `parent *-- child`
+|===
+
+Corresponds to `VRequirement` + `VCompartment` in the Java pilot implementation.
+
+[source,scheme]
+----
+(define puml (generate-requirement-diagram (syster/file-symbols model)))
+----
+
+Accepts `"title"` (defaults to `"Requirement Diagram"`) and `"theme"` options.
+Output structure is controlled by `script/templates/requirement.hbs`.
+
+=== `(generate-requirement-diagram-scoped sym all-symbols [opts])` → string
+
+Generate a requirement diagram scoped to the `RequirementDefinition` /
+`RequirementUsage` children of `sym`.
+
+[source,scheme]
+----
+(define sys (syster/find-by-name symbols "SystemRequirements"))
+(define puml (generate-requirement-diagram-scoped sys symbols))
+----
+
+== Interaction diagrams
+
+=== `(generate-sequence-diagram sym all-symbols [opts])` → string
+
+Generate a sequence diagram for an interaction context `sym`.
+
+Selects `PartUsage`, `ItemUsage`, and `OccurrenceUsage` children as
+participants (lifelines).
+Selects `ConnectionUsage`, `FlowUsage`, and `MessageUsage` children as
+messages; endpoint names are derived from connector-end children.
+
+NOTE: The Java `VSequence` implementation derives message ordering from
+`Succession` relationships and feature chains. This Scheme implementation
+emits messages in declaration order.  Succession-based ordering is a planned
+improvement.
+
+[source,scheme]
+----
+(define interaction (syster/find-by-name symbols "SensorQueryInteraction"))
+(define puml        (generate-sequence-diagram interaction symbols))
+----
+
+Accepts `"title"` (defaults to `"<name> Sequence"`) and `"theme"` options.
+Output structure is controlled by `script/templates/sequence.hbs`.
+
+=== `(generate-use-case-diagram symbols [opts])` → string
+
+Generate a use case diagram from a flat list of `HirSymbol` values.
+
+Selects `UseCaseDefinition`, `UseCaseUsage`, `CaseDefinition`, and
+`CaseUsage` symbols as use cases.
+Selects `ActorUsage` and `ActorDefinition` symbols as actors.
+Derives actor→use-case edges from `References` relationships.
+Derives include edges from `Specializes` relationships between use cases.
+
+Corresponds to `VCase` + `VCaseMembers` in the Java pilot implementation.
+
+[source,scheme]
+----
+(define puml (generate-use-case-diagram (syster/file-symbols model)
+               (hash "title"       "Campaign Use Cases"
+                     "system_name" "Campaign System")))
+----
+
+[cols="2,1,1,3"]
+|===
+| Key | Type | Default | Effect
+
+| `"title"` | string | `"Use Case Diagram"` | Diagram title
+| `"theme"` | string | `"plain"` | PlantUML `!theme` directive
+| `"system_name"` | string | `"System"` | Label on the system boundary rectangle
+|===
+
+Output structure is controlled by `script/templates/use-case.hbs`.
 
 == File output
 
@@ -137,6 +288,7 @@ creating or overwriting the file.
 Invoke `plantuml` to render `puml-path`.
 `format` is a string: `"svg"`, `"png"`, `"pdf"`, or `"txt"`.
 Output is written next to the `.puml` file.
+Runs `plantuml` with `-Djava.awt.headless=true` so no display is required.
 
 [source,scheme]
 ----
@@ -157,63 +309,69 @@ Render `puml-path` and write the output to `output-dir`.
 Render the diagram and open the result in the system default viewer.
 Uses `xdg-open` on Linux.
 
-== Utilities
+== Shared utilities (from `sysml-util.scm`)
 
-=== `(symbol->class-block sym)` → string
+These are re-exported by `plantuml.scm` and available to any script that
+loads it.
 
-Render a single `HirSymbol` as a PlantUML class block with `<<block>>` stereotype.
-Used internally by `generate-bdd`; useful for custom generators.
+=== `(pu-alias name)` → string
+
+Return a PlantUML-safe identifier by replacing characters outside `[A-Za-z0-9_]`
+with `_`.
+
+=== `(filter-kind symbols kind-str)` → list
+
+Return symbols whose `hir-symbol/kind` equals `kind-str`.
+
+=== `(filter-kinds symbols kind-list)` → list
+
+Return symbols whose `hir-symbol/kind` is a member of `kind-list`.
+
+=== `(filter-map f lst)` → list
+
+Map `f` over `lst`, dropping `#f` results.
+
+=== `(find-syster-by-name symbols name)` → symbol or `#f`
+
+Return the first symbol in `symbols` whose name equals `name`, or `#f`.
+
+=== `(find-rel rels kind)` → relationship or `#f`
+
+Return the first relationship in `rels` whose kind equals `kind`, or `#f`.
+
+=== `(find-rels rels kind)` → list
+
+Return all relationships in `rels` whose kind equals `kind`.
+
+=== `(rel-targets sym kind)` → list of strings
+
+Return the target name strings of all relationships of `kind` on `sym`.
 
 [source,scheme]
 ----
-(displayln (symbol->class-block (syster/find-by-name symbols "Engine")))
+(rel-targets vehicle-def "Specializes")
+; => ("AbstractVehicle")
 ----
 
-Output:
+=== `(hash-try-get hash key)` → value or `#f`
 
-[source,text]
-----
-class "Engine" <<block>> {
-  + power : Real
-  ~ fuelIn
-  ~ driveOut
-}
-----
-
-=== `(composition-line parent-name part-sym)` → string
-
-Return the PlantUML composition line for a part usage.
-
-[source,scheme]
-----
-(composition-line "VehicleSystem" part-usage-sym)
-; => "\"VehicleSystem\" *-- \"Engine\" : engine\n"
-----
-
-=== `(inheritance-line child-sym)` → string or `#f`
-
-Return the PlantUML inheritance line for a symbol with a `Specializes`
-relationship, or `#f` if none.
-
-=== `(plantuml-header [title] [theme])` → string
-
-Return the `@startuml … skinparam …` preamble.
-
-=== `(plantuml-footer)` → string
-
-Return `"@enduml\n"`.
+Return `(hash-ref hash key)` if `key` is present, `#f` otherwise.
 
 == Complete example
 
-The script `script/examples/vehicle-diagrams.scm` shows the full pipeline:
+The script `script/examples/vehicle-diagrams.scm` shows the BDD + IBD pipeline:
 
 [source,scheme]
 ----
 include::../../script/examples/vehicle-diagrams.scm[]
 ----
 
+The campaign generation script `script/gen-plantuml.scm` shows all diagram
+types against the multi-file `data/campaign/` model.
+
 == See also
 
+* xref:library-structure.adoc[Script library structure]
 * xref:hbs-bindings.adoc[Handlebars Steel bindings reference]
 * xref:syster-base-bindings.adoc[syster-base Steel bindings reference]
 * xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]

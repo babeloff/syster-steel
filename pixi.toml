@@ -62,6 +62,15 @@ description = "Build and upload packages to prefix.dev/meso-forge (requires PREF
 cmd = "cargo run -- -L script script/gen-plantuml.scm"
 description = "Generate PlantUML diagrams from data/campaign/ into render/"
 
+[tasks.gen-self]
+cmd = "cargo run -- -L script script/gen-self-diagrams.scm"
+description = "Generate self-documenting diagrams from data/self/ into wisdom/diagrams-gen/"
+
+[tasks.render-self]
+cmd = "JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tsvg wisdom/diagrams-gen/*.puml && JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tpng wisdom/diagrams-gen/*.puml"
+depends-on = ["gen-self"]
+description = "Generate and render self-documenting diagrams to SVG and PNG"
+
 [tasks.render]
 cmd = "JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tsvg render/*.puml && JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tpng render/*.puml"
 depends-on = ["gen-diagrams"]

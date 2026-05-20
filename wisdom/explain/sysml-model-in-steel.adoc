@@ -203,6 +203,12 @@ Depth equals the number of `::` separators plus one.
          (= (qname-depth cqn) (+ 1 (qname-depth pqn))))))
 ----
 
+The diagram below shows the syster-steel system model itself as a Block Definition Diagram.
+Each `<<block>>` corresponds to one `HirSymbol` of kind `PartDefinition`;
+nesting is encoded in qualified names such as `SysterSteel::RustEngine::bridge`.
+
+image::../diagrams-gen/system-bdd.svg[syster-steel Block Definition Diagram,width=100%,align=center]
+
 == Views and ViewData
 
 Symbols of kind `"ViewDefinition"` or `"ViewUsage"` carry extra data.

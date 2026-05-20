@@ -111,8 +111,10 @@ syntax including partials, helpers, and block helpers.
 
 == Templates bundled with plantuml.scm
 
-`plantuml.scm` creates a shared registry `*hbs*` at load time and registers the
-following templates from `*templates-dir*` (default: `"script/templates"`):
+`plantuml.scm` creates a shared registry `*hbs*` at load time and registers
+the following templates from `*templates-dir*` (default: `"script/templates"`).
+Sub-libraries each have a `make-*-hbs` factory that registers only their own
+template when used independently.
 
 [cols="1,1,3"]
 |===
@@ -123,6 +125,11 @@ following templates from `*templates-dir*` (default: `"script/templates"`):
 | `"state-machine"` | `state-machine.hbs` | `generate-state-machine`
 | `"package"`       | `package.hbs`       | `generate-package-diagram`
 | `"viewpoints"`    | `viewpoints.hbs`    | `generate-viewpoints-diagram`
+| `"action-flow"`   | `action-flow.hbs`   | `generate-action-flow`, `generate-action-flow-all`
+| `"requirement"`   | `requirement.hbs`   | `generate-requirement-diagram`, `generate-requirement-diagram-scoped`
+| `"sequence"`      | `sequence.hbs`      | `generate-sequence-diagram`
+| `"use-case"`      | `use-case.hbs`      | `generate-use-case-diagram`
+| `"allocation"`    | `allocation.hbs`    | (template available; generator planned)
 |===
 
 === Override the templates directory

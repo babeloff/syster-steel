@@ -66,6 +66,10 @@ cargo build --release
 | 0.8.2
 | Steel Scheme bytecode VM — the embedded engine
 
+| https://crates.io/crates/syster-base[syster-base]
+| 0.4.0-alpha
+| SysML v2 parser and HIR — registered with the engine by `src/bridge.rs`
+
 | https://crates.io/crates/clap[clap]
 | 4
 | CLI argument parsing
@@ -77,6 +81,18 @@ cargo build --release
 | https://crates.io/crates/anyhow[anyhow]
 | 1
 | Error handling
+
+| https://crates.io/crates/tracing[tracing]
+| 0.1
+| Structured logging (debug output via `RUST_LOG`)
+
+| https://crates.io/crates/tracing-subscriber[tracing-subscriber]
+| 0.3
+| Log formatting and `RUST_LOG` env-filter
+
+| https://crates.io/crates/dirs[dirs]
+| 5
+| Platform home-directory lookup for REPL history file
 |===
 
 == Architecture
@@ -93,10 +109,10 @@ syster-base (Rust library)
     │  parses SysML v2 → HirSymbol list
     ▼
 syster-steel (this crate)
-    │  registers HirSymbol accessors with Engine::register_type / register_value
+    │  registers HirSymbol accessors with Engine::register_fn (src/bridge.rs)
     │  runs scripts via Engine::run
     ▼
-Steel Scheme scripts (wisdom/)
+Steel Scheme scripts (script/)
     │  filter symbols, generate PlantUML text
     ▼
 plantuml → SVG / PNG / PDF
@@ -141,13 +157,19 @@ The `wisdom/` directory follows the https://diataxis.fr/[Diátaxis] framework.
 syster-steel/
 ├── src/
 │   ├── main.rs        — entry point; creates Engine, registers bindings, runs scripts
+│   ├── bridge.rs      — registers syster-base types and accessors with the Engine
 │   ├── cli.rs         — clap argument definitions
 │   └── repl.rs        — rustyline REPL with multi-line input and history
+├── script/
+│   ├── plantuml.scm   — Steel library for generating PlantUML diagrams
+│   └── gen-plantuml.scm — example script: generate all diagrams from data/campaign/
+├── data/
+│   └── campaign/      — SysML v2 model split across domain-specific files
 ├── wisdom/
 │   ├── tutor/         — step-by-step tutorials
 │   ├── instruct/      — how-to guides
 │   ├── explain/       — explanations and design rationale
-│   └── refer/         — reference docs and Steel library scripts (.scm)
+│   └── refer/         — reference docs
 ├── Cargo.toml
 ├── pixi.toml          — build tasks and conda environment
 ├── recipe.yaml        — rattler-build conda package recipe

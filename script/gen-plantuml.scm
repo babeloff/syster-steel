@@ -38,9 +38,9 @@
 
 ;; ── Load model from all .sysml files in the campaign directory ────────────────
 ;;
-;; Each file re-opens package WorkflowModel (or a nested sub-package), so they
-;; compose into a single namespace.  We parse each file independently and
-;; concatenate the symbol lists — sufficient for diagram generation.
+;; Each file contributes to the shared campaign namespace.
+;; We parse each file independently and concatenate the symbol lists —
+;; sufficient for diagram generation.
 
 (define (load-campaign-symbols dir)
   (define top-files   (glob (string-append dir "/*.sysml")))
@@ -113,14 +113,14 @@
 ;; ── Diagram 5: Vehicle hierarchy (BDD scoped to vehicle defs) ────────────────
 ;;
 ;; Analogous to write_architecture_diagram in the Python script.
-;; Scope to SimulatedVehicle and its subtypes.
+;; Scope to VehicleModel::VehicleSystem and its subtypes.
 
 (define vehicle-kinds
   '("PartDefinition"))
 
 (define (vehicle-sym? s)
   (and (member (hir-symbol/kind s) vehicle-kinds)
-       (or (equal? (hir-symbol/name s) "SimulatedVehicle")
+       (or (equal? (hir-symbol/name s) "VehicleSystem")
            (equal? (hir-symbol/name s) "ScoutVehicle")
            (equal? (hir-symbol/name s) "PatrolVehicle")
            (equal? (hir-symbol/name s) "EvaderVehicle")

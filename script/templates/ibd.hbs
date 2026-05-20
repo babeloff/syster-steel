@@ -4,8 +4,8 @@
 {{{direction}}}
 
 package "{{{name}}}" {
-{{#each parts}}  [{{{name}}}]
-{{/each}}{{#each ports}}  () "{{{name}}}"
+{{#each parts}}  [{{{name}}}] as {{{alias}}}
+{{/each}}{{#each ports}}  () "{{{name}}}" as {{{alias}}}
 {{/each}}}
 
 @enduml

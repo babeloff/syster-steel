@@ -45,9 +45,29 @@ description = "Set an explicit version in both Cargo.toml and pixi.toml (pass VE
 cmd = "cargo set-version --bump patch && pixi run sync-version"
 description = "Bump the patch version and sync it to pixi.toml"
 
+[tasks.package]
+cmd = "rattler-build build --recipe recipe.yaml"
+description = "Build conda packages from recipe.yaml into output/"
+
+[tasks.publish]
+cmd = "rattler-build upload prefix --channel meso-forge output/linux-64/*.conda"
+depends-on = ["package"]
+description = "Build and upload packages to prefix.dev/meso-forge (requires PREFIX_API_KEY)"
+
+[tasks.gen-diagrams]
+cmd = "cargo run -- -L script script/gen-plantuml.scm"
+description = "Generate PlantUML diagrams from data/campaign/ into render/"
+
+[tasks.render]
+cmd = "plantuml -tsvg render/*.puml && plantuml -tpng render/*.puml"
+depends-on = ["gen-diagrams"]
+description = "Generate diagrams from data/campaign/ then render all .puml files to SVG and PNG"
+
 [dependencies]
 rust = ">=1.85"
 gh = ">=2.86"
 cargo-edit = ">=0.13"
 dasel = ">=3.2"
 sd = ">=1"
+rattler-build = ">=0.35"
+plantuml = ">=1.2024"

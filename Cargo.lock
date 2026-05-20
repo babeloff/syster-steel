@@ -1987,6 +1987,7 @@ dependencies = [
  "anyhow",
  "clap",
  "dirs",
+ "glob",
  "handlebars",
  "rustyline",
  "serde_json",

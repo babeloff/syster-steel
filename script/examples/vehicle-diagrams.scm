@@ -5,7 +5,7 @@
 ;;
 ;; Writes out/vehicle-bdd.puml and out/vehicle-ibd.puml, then renders to SVG.
 
-(require "plantuml")
+(require "plantuml.scm")
 (require-builtin steel/filesystem)
 
 (define model   (syster/parse-file "vehicle.sysml"))

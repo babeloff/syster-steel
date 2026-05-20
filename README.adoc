@@ -17,22 +17,38 @@ without recompiling the toolchain.
 
 == Quick start
 
+=== Install
+
+Install `syster-steel` globally with https://pixi.sh[pixi] from the
+https://prefix.dev/channels/meso-forge[meso-forge] channel:
+
+[source,shell]
+----
+pixi global install --channel conda-forge --channel https://prefix.dev/meso-forge syster-steel
+----
+
+Verify the installation:
+
+[source,shell]
+----
+syster-steel --version
+----
+
+=== Use
+
 [source,shell]
 ----
 # Start the interactive REPL
 syster-steel
 
 # Run a script
-syster-steel generate-bdd.scm
+syster-steel -L script script/gen-plantuml.scm
 
 # Run a script, then stay in the REPL
-syster-steel -i generate-bdd.scm
+syster-steel -i -L script script/gen-plantuml.scm
 
 # Evaluate an inline expression
 syster-steel -e "(displayln (+ 1 2))"
-
-# Add a module search directory
-syster-steel -L wisdom/refer generate-bdd.scm
 ----
 
 See link:wisdom/refer/cli.adoc[CLI reference] for the full flag listing.
@@ -47,7 +63,12 @@ pixi run build     # debug build
 pixi run test      # run the test suite
 pixi run check     # lint with Clippy
 pixi run repl      # start the REPL via cargo run
+pixi run package   # build conda packages into output/
+pixi run publish   # build and upload to prefix.dev/meso-forge
 ----
+
+`pixi run publish` requires a `PREFIX_API_KEY` environment variable with a
+valid https://prefix.dev[prefix.dev] API key.
 
 With cargo directly:
 
@@ -93,6 +114,16 @@ cargo build --release
 | https://crates.io/crates/dirs[dirs]
 | 5
 | Platform home-directory lookup for REPL history file
+
+| https://crates.io/crates/handlebars[handlebars]
+| 6
+| Handlebars template engine — renders PlantUML source from `script/templates/*.hbs`
+via the `hbs/*` Steel bindings in `src/hbs.rs`
+
+| https://crates.io/crates/serde_json[serde_json]
+| 1
+| JSON value tree used to bridge Steel hash-maps and lists into the Handlebars
+rendering context
 |===
 
 == Architecture
@@ -109,11 +140,15 @@ syster-base (Rust library)
     │  parses SysML v2 → HirSymbol list
     ▼
 syster-steel (this crate)
-    │  registers HirSymbol accessors with Engine::register_fn (src/bridge.rs)
+    │  registers HirSymbol accessors — src/bridge.rs
+    │  registers hbs/* template API  — src/hbs.rs
     │  runs scripts via Engine::run
     ▼
 Steel Scheme scripts (script/)
-    │  filter symbols, generate PlantUML text
+    │  filter symbols → data hash → hbs/render
+    ▼
+Handlebars templates (script/templates/)
+    │  render PlantUML source
     ▼
 plantuml → SVG / PNG / PDF
 ----
@@ -149,6 +184,7 @@ The `wisdom/` directory follows the https://diataxis.fr/[Diátaxis] framework.
 * link:wisdom/refer/cli.adoc[CLI reference]
 * link:wisdom/refer/steel-quick-reference.adoc[Steel language quick reference]
 * link:wisdom/refer/syster-base-bindings.adoc[syster-base Steel bindings]
+* link:wisdom/refer/hbs-bindings.adoc[Handlebars Steel bindings]
 * link:wisdom/refer/plantuml-procedures.adoc[PlantUML generation procedures]
 
 == Project layout
@@ -158,13 +194,18 @@ syster-steel/
 ├── src/
 │   ├── main.rs        — entry point; creates Engine, registers bindings, runs scripts
 │   ├── bridge.rs      — registers syster-base types and accessors with the Engine
+│   ├── hbs.rs         — registers hbs/* Handlebars bindings with the Engine
 │   ├── cli.rs         — clap argument definitions
 │   └── repl.rs        — rustyline REPL with multi-line input and history
 ├── script/
 │   ├── plantuml.scm   — Steel library for generating PlantUML diagrams
-│   └── gen-plantuml.scm — example script: generate all diagrams from data/campaign/
+│   ├── gen-plantuml.scm — generates all diagrams from data/campaign/
+│   ├── gen-bdd.scm    — standalone BDD generation tutorial script
+│   ├── templates/     — Handlebars templates for each PlantUML diagram type
+│   └── examples/      — tutorial example scripts
 ├── data/
-│   └── campaign/      — SysML v2 model split across domain-specific files
+│   ├── campaign/      — SysML v2 campaign model (multi-file)
+│   └── docs/          — SysML v2 example models used in tutorials
 ├── wisdom/
 │   ├── tutor/         — step-by-step tutorials
 │   ├── instruct/      — how-to guides

@@ -7,7 +7,7 @@ Load it with:
 
 [source,scheme]
 ----
-(require "plantuml")              ; if script/ is on the load path (-L script)
+(require "plantuml.scm")          ; if script/ is on the load path (-L script)
 ; or
 (require "script/plantuml.scm")
 ----

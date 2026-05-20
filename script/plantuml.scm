@@ -1,7 +1,7 @@
 ;; plantuml.scm — PlantUML diagram generation via Handlebars templates
 ;;
 ;; Load with:
-;;   (require "plantuml")            ; if script/ is on the load path (-L script)
+;;   (require "plantuml.scm")         ; if script/ is on the load path (-L script)
 ;;   (require "script/plantuml.scm") ; from project root
 ;;
 ;; Templates are loaded from *templates-dir* (default: "script/templates/") relative
@@ -29,8 +29,6 @@
   render-diagram-to
   render-and-open)
 
-(require-builtin steel/filesystem)
-
 ;; ── Template registry ─────────────────────────────────────────────────────────
 
 (define *templates-dir* "script/templates")
@@ -53,13 +51,24 @@
 
 ;; ── Utilities ─────────────────────────────────────────────────────────────────
 
+(define (pu-safe-char? c)
+  (let ([n (char->integer c)])
+    (or (and (>= n 65) (<= n 90))    ; A-Z
+        (and (>= n 97) (<= n 122))   ; a-z
+        (and (>= n 48) (<= n 57))    ; 0-9
+        (= n 95))))                  ; _
+
+;; True for symbols whose names start with '<' — Steel internal representations
+;; that leak through when a SysML element has no user-visible name.
+(define (user-visible? sym)
+  (let ([name (hir-symbol/name sym)])
+    (or (= (string-length name) 0)
+        (not (char=? (string-ref name 0) #\<)))))
+
 (define (pu-alias name)
   "Return a PlantUML-safe identifier: replace non-alphanumeric chars with _."
   (list->string
-    (map (lambda (c)
-           (if (or (char-alphabetic? c) (char-numeric? c) (char=? c #\_))
-               c
-               #\_))
+    (map (lambda (c) (if (pu-safe-char? c) c #\_))
          (string->list name))))
 
 (define (filter-kind symbols kind-str)
@@ -89,7 +98,7 @@
                         (car opt-args)
                         (hash))]
          [title     (hash-try-get opts "title")]
-         [theme     (or (hash-try-get opts "theme") "default")]
+         [theme     (or (hash-try-get opts "theme") "plain")]
          [def-kinds '("PartDefinition" "ItemDefinition" "AttributeDefinition"
                       "PortDefinition" "ConnectionDefinition" "ActionDefinition"
                       "StateDefinition" "RequirementDefinition"
@@ -155,14 +164,16 @@
          [direction (or (hash-try-get opts "direction") "left to right direction")]
          [pname     (hir-symbol/name parent-sym)]
          [children  (syster/children-of all-symbols parent-sym)]
-         [parts     (filter-kind children "PartUsage")]
-         [ports     (filter-kind children "PortUsage")]
+         [parts     (filter user-visible? (filter-kind children "PartUsage"))]
+         [ports     (filter user-visible? (filter-kind children "PortUsage"))]
          [data      (hash "title"     (or title "")
-                          "theme"     "default"
+                          "theme"     "plain"
                           "direction" direction
                           "name"      pname
-                          "parts" (map (lambda (p) (hash "name" (hir-symbol/name p))) parts)
-                          "ports" (map (lambda (p) (hash "name" (hir-symbol/name p))) ports))])
+                          "parts" (map (lambda (p) (hash "name"  (hir-symbol/name p)
+                                                         "alias" (pu-alias (hir-symbol/name p)))) parts)
+                          "ports" (map (lambda (p) (hash "name"  (hir-symbol/name p)
+                                                         "alias" (pu-alias (hir-symbol/name p)))) ports))])
     (hbs/render *hbs* "ibd" data)))
 
 ;; ── State Machine Diagram ─────────────────────────────────────────────────────
@@ -197,7 +208,7 @@
                      #f)))
              trans)]
          [data (hash "title"         title
-                     "theme"         "default"
+                     "theme"         "plain"
                      "initial_state" initial
                      "states"        state-data
                      "transitions"   trans-data)])
@@ -216,12 +227,32 @@
            (map (lambda (pkg)
                   (let ([children (syster/children-of symbols pkg)])
                     (hash "name" (hir-symbol/name pkg)
-                          "children" (map (lambda (c) (hash "name" (hir-symbol/name c)))
-                                         children))))
+                          "children" (filter-map
+                                       (lambda (c)
+                                         (if (user-visible? c)
+                                             (hash "name" (hir-symbol/name c))
+                                             #f))
+                                       children))))
                 packages)]
+         ;; Merge packages that share the same name (one per source file otherwise).
+         [merged-data
+           (let loop ([pkgs pkg-data] [acc '()])
+             (if (null? pkgs)
+                 (reverse acc)
+                 (let* ([pkg  (car pkgs)]
+                        [name (hash-ref pkg "name")]
+                        [dup  (filter (lambda (p) (equal? (hash-ref p "name") name)) acc)])
+                   (if (null? dup)
+                       (loop (cdr pkgs) (cons pkg acc))
+                       (let* ([existing  (car dup)]
+                              [merged    (hash "name" name
+                                               "children" (append (hash-ref existing "children")
+                                                                   (hash-ref pkg "children")))]
+                              [rest      (filter (lambda (p) (not (equal? (hash-ref p "name") name))) acc)])
+                         (loop (cdr pkgs) (cons merged rest)))))))]
          [data (hash "title"    title
-                     "theme"    "default"
-                     "packages" pkg-data)])
+                     "theme"    "plain"
+                     "packages" merged-data)])
     (hbs/render *hbs* "package" data)))
 
 ;; ── Viewpoints / View Definitions Diagram ─────────────────────────────────────
@@ -262,7 +293,7 @@
                      #f)))
              vd-defs)]
          [data (hash "title"            title
-                     "theme"            "default"
+                     "theme"            "plain"
                      "viewpoints"       (map to-node vp-defs)
                      "view_definitions" (map to-node vd-defs)
                      "renderings"       (map to-node rd-defs)

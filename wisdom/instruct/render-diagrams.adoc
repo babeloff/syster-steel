@@ -87,7 +87,7 @@ Run with `-L script` so `plantuml.scm` is found on the load path.
 
 [source,scheme]
 ----
-(require "plantuml")   ; script/plantuml.scm
+(require "plantuml.scm")   ; script/plantuml.scm
 
 (render-diagram "vehicle-bdd.puml" "svg")
 (render-diagram "vehicle-bdd.puml" "png")

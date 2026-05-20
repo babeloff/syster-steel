@@ -31,9 +31,7 @@ outputs:
 
     build:
       script:
-        - cargo build --release
-        - mkdir -p $PREFIX/bin
-        - cp target/release/syster-steel $PREFIX/bin/syster-steel
+        - cargo install --path . --no-track --root $PREFIX
 
     requirements:
       build:

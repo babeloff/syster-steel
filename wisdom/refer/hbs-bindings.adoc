@@ -127,13 +127,13 @@ following templates from `*templates-dir*` (default: `"script/templates"`):
 
 === Override the templates directory
 
-Set `*templates-dir*` before the first `(require "plantuml")`.
+Set `*templates-dir*` before the first `(require "plantuml.scm")`.
 Templates are registered once at load time and cached by Steel's module system.
 
 [source,scheme]
 ----
 (define *templates-dir* "my/custom/templates")
-(require "plantuml")
+(require "plantuml.scm")
 ----
 
 === Add templates to the shared registry
@@ -143,7 +143,7 @@ templates:
 
 [source,scheme]
 ----
-(require "plantuml")
+(require "plantuml.scm")
 (hbs/register-template-file! *hbs* "my-bdd" "my/templates/my-bdd.hbs")
 (hbs/render *hbs* "my-bdd" data)
 ----

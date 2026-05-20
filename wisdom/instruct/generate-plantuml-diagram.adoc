@@ -8,7 +8,7 @@ needed for them.
 
 [source,scheme]
 ----
-(require "plantuml")          ; from script/plantuml.scm — run with -L script
+(require "plantuml.scm")          ; from script/plantuml.scm — run with -L script
 ----
 
 `plantuml.scm` loads Handlebars templates from `script/templates/` on startup.
@@ -18,7 +18,7 @@ Run scripts from the project root so the path resolves correctly, or set
 [source,scheme]
 ----
 (define *templates-dir* "path/to/templates")
-(require "plantuml")
+(require "plantuml.scm")
 ----
 
 == Block Definition Diagram (BDD)

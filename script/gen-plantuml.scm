@@ -5,19 +5,20 @@
 ;;   syster-steel -L script -e '(define *campaign-dir* "data/other")' \
 ;;                script/gen-plantuml.scm
 ;;
-;; By default loads all .sysml files under data/campaign/ and writes diagrams
-;; to out/.  Override with:
+;; By default loads all .sysml files under data/campaign/ and
+;; writes diagrams to render/.
+;; Override with:
 ;;   (define *campaign-dir* "path/to/campaign/")
 ;;   (define *output-dir*   "path/to/out/")
 ;;   (define *render-fmt*   "svg")   ; svg | png | pdf | txt | #f to skip
 
-(require "plantuml")                ; script/plantuml.scm
-(require-builtin steel/filesystem)  ; path-exists? create-directory! glob
+(require "plantuml.scm")            ; script/plantuml.scm
+(require-builtin steel/filesystem)  ; path-exists? create-directory!
 
 ;; ── Configuration ─────────────────────────────────────────────────────────────
 
 (define *campaign-dir* "data/campaign")
-(define *output-dir*   "out")
+(define *output-dir*   "render")
 (define *render-fmt*   "svg")   ; set to #f to skip rendering
 
 ;; ── Helpers ───────────────────────────────────────────────────────────────────
@@ -43,8 +44,8 @@
 ;; sufficient for diagram generation.
 
 (define (load-campaign-symbols dir)
-  (define top-files   (glob (string-append dir "/*.sysml")))
-  (define alpha-files (glob (string-append dir "/alpha/*.sysml")))
+  (define top-files   (glob-list (string-append dir "/*.sysml")))
+  (define alpha-files (glob-list (string-append dir "/alpha/*.sysml")))
   (define all-files   (append top-files alpha-files))
   (displayln (string-append "  found " (number->string (length all-files)) " files"))
   (apply append

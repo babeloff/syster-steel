@@ -2,6 +2,7 @@ mod bridge;
 mod cli;
 mod hbs;
 mod repl;
+mod sys;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -18,6 +19,7 @@ fn main() -> Result<()> {
     let mut engine = Engine::new();
     bridge::register(&mut engine);
     hbs::register(&mut engine);
+    sys::register(&mut engine);
 
     for path in &cli.load_paths {
         debug!("adding load path: {}", path.display());

@@ -8,10 +8,9 @@ and explore the symbols it contains from the Steel REPL.
 *Prerequisites:* complete xref:01-getting-started.adoc[Tutorial 1] and have
 `syster-steel` installed with the `syster/base` Rust bindings available.
 
-NOTE: The `syster/base` bindings are registered by the syster-steel host application
-when it starts the `steel-core` `Engine`.
-If `(require "syster/base")` raises `module not found`,
-the bindings have not yet been compiled into your build.
+NOTE: The `syster/base` functions are registered automatically when `syster-steel`
+starts.
+No `require` is needed — they are available immediately in any script or REPL session.
 See xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings] for the full API.
 
 == 1. Create a sample SysML v2 model
@@ -55,11 +54,10 @@ Start the REPL:
 syster-steel
 ----
 
-Load the `syster/base` module, then parse the file:
+Parse the file:
 
 [source,scheme]
 ----
-> (require "syster/base")
 > (define model (syster/parse-file "vehicle.sysml"))
 > model
 #<SysmlModel vehicle.sysml>

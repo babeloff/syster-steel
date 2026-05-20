@@ -1,0 +1,159 @@
+= syster-steel
+:description: Steel Scheme REPL and script runner for SysML v2 workflows
+:toc: left
+:toclevels: 2
+:icons: font
+
+syster-steel embeds the https://mattwparas.github.io/steel/book/[Steel Scheme]
+interpreter as a command-line tool for the
+https://github.com/jade-codes/syster-base[syster] SysML v2 toolchain.
+It provides an interactive REPL and a script runner,
+both backed by a single `steel-core` `Engine` instance.
+
+Steel scripts can load and query parsed SysML v2 models,
+generate PlantUML diagrams,
+and drive any other transformation or reporting task —
+without recompiling the toolchain.
+
+== Quick start
+
+[source,shell]
+----
+# Start the interactive REPL
+syster-steel
+
+# Run a script
+syster-steel generate-bdd.scm
+
+# Run a script, then stay in the REPL
+syster-steel -i generate-bdd.scm
+
+# Evaluate an inline expression
+syster-steel -e "(displayln (+ 1 2))"
+
+# Add a module search directory
+syster-steel -L wisdom/refer generate-bdd.scm
+----
+
+See link:wisdom/refer/cli.adoc[CLI reference] for the full flag listing.
+
+== Building
+
+With https://pixi.sh[pixi] (recommended):
+
+[source,shell]
+----
+pixi run build     # debug build
+pixi run test      # run the test suite
+pixi run check     # lint with Clippy
+pixi run repl      # start the REPL via cargo run
+----
+
+With cargo directly:
+
+[source,shell]
+----
+cargo build --release
+----
+
+=== Dependencies
+
+[cols="1,1,3"]
+|===
+| Crate | Version | Role
+
+| https://crates.io/crates/steel-core[steel-core]
+| 0.8.2
+| Steel Scheme bytecode VM — the embedded engine
+
+| https://crates.io/crates/clap[clap]
+| 4
+| CLI argument parsing
+
+| https://crates.io/crates/rustyline[rustyline]
+| 14
+| REPL line editing and history
+
+| https://crates.io/crates/anyhow[anyhow]
+| 1
+| Error handling
+|===
+
+== Architecture
+
+syster-steel is a concrete example of
+https://mattwparas.github.io/steel/book/start/embedded.html[using Steel as an embedded scripting engine].
+The `steel-core` crate provides the VM;
+this application creates an `Engine`,
+registers syster-base types and accessor functions,
+then hands control to user-supplied Scheme scripts.
+
+----
+syster-base (Rust library)
+    │  parses SysML v2 → HirSymbol list
+    ▼
+syster-steel (this crate)
+    │  registers HirSymbol accessors with Engine::register_type / register_value
+    │  runs scripts via Engine::run
+    ▼
+Steel Scheme scripts (wisdom/)
+    │  filter symbols, generate PlantUML text
+    ▼
+plantuml → SVG / PNG / PDF
+----
+
+See link:wisdom/explain/steel-as-extension-language.adoc[Why Steel Scheme as the extension language]
+for a full explanation.
+
+== Documentation
+
+The `wisdom/` directory follows the https://diataxis.fr/[Diátaxis] framework.
+
+=== Tutorials — learning by doing
+
+* link:wisdom/tutor/01-getting-started.adoc[Getting started with the REPL]
+* link:wisdom/tutor/02-loading-a-sysml-model.adoc[Loading a SysML v2 model]
+* link:wisdom/tutor/03-generating-a-plantuml-diagram.adoc[Generating a PlantUML diagram end-to-end]
+
+=== How-to guides — accomplishing specific goals
+
+* link:wisdom/instruct/run-a-script.adoc[Run a script]
+* link:wisdom/instruct/load-sysml-model.adoc[Load a SysML model from a file]
+* link:wisdom/instruct/generate-plantuml-diagram.adoc[Generate a PlantUML file from a SysML view]
+* link:wisdom/instruct/render-diagrams.adoc[Render a PlantUML file to SVG or PNG]
+
+=== Explanations — understanding how things work
+
+* link:wisdom/explain/steel-as-extension-language.adoc[Why Steel Scheme as the extension language]
+* link:wisdom/explain/sysml-model-in-steel.adoc[How SysML models are represented in Steel]
+* link:wisdom/explain/plantuml-pipeline.adoc[The SysML → PlantUML → SVG pipeline]
+
+=== Reference — precise technical details
+
+* link:wisdom/refer/cli.adoc[CLI reference]
+* link:wisdom/refer/steel-quick-reference.adoc[Steel language quick reference]
+* link:wisdom/refer/syster-base-bindings.adoc[syster-base Steel bindings]
+* link:wisdom/refer/plantuml-procedures.adoc[PlantUML generation procedures]
+
+== Project layout
+
+----
+syster-steel/
+├── src/
+│   ├── main.rs        — entry point; creates Engine, registers bindings, runs scripts
+│   ├── cli.rs         — clap argument definitions
+│   └── repl.rs        — rustyline REPL with multi-line input and history
+├── wisdom/
+│   ├── tutor/         — step-by-step tutorials
+│   ├── instruct/      — how-to guides
+│   ├── explain/       — explanations and design rationale
+│   └── refer/         — reference docs and Steel library scripts (.scm)
+├── Cargo.toml
+├── pixi.toml          — build tasks and conda environment
+├── recipe.yaml        — rattler-build conda package recipe
+└── LICENSE
+----
+
+== License
+
+link:LICENSE[MIT] — Copyright © 2026 Fredrick Eisele

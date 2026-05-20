@@ -4,13 +4,9 @@
 
 == Prerequisites
 
-The `syster/base` module must be available.
-Load it at the top of any script that accesses SysML constructs:
-
-[source,scheme]
-----
-(require "syster/base")
-----
+The syster-base functions are registered automatically when `syster-steel` starts.
+No `require` is needed — `syster/parse-file`, `hir-symbol/*`, and related functions
+are available in every script and REPL session.
 
 See xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings] for the full API.
 
@@ -34,19 +30,6 @@ or raises an error if the file cannot be read.
 Returns a flat list of `HirSymbol` values representing every element in the
 model, including nested members.
 The list order matches definition order in the source file.
-
-== Check for parse errors
-
-[source,scheme]
-----
-(define diagnostics (syster/check-file model))
-(for-each
-  (lambda (d)
-    (displayln (string-append
-                (diagnostic/severity d) ": "
-                (diagnostic/message d))))
-  diagnostics)
-----
 
 == Filter symbols by kind
 
@@ -112,6 +95,45 @@ children share a qualified-name prefix with their parent.
 
 Relationship kinds: `"TypedBy"`, `"Specializes"`, `"Redefines"`, `"Subsets"`,
 `"Satisfies"`, `"Performs"`, `"Verifies"`.
+
+== Load a model split across multiple files
+
+A large model can be split into multiple `.sysml` files that each re-open
+the same package.
+Parse each file independently and concatenate the symbol lists:
+
+[source,scheme]
+----
+(require-builtin steel/filesystem)
+
+(define (load-sysml-directory dir)
+  (apply append
+    (map (lambda (f)
+           (syster/file-symbols (syster/parse-file f)))
+         (glob (string-append dir "/*.sysml")))))
+
+(define symbols (load-sysml-directory "data/campaign"))
+----
+
+If the directory has sub-directories (for example, one per campaign instance),
+extend the pattern:
+
+[source,scheme]
+----
+(define (load-campaign-symbols dir)
+  (define top-files   (glob (string-append dir "/*.sysml")))
+  (define alpha-files (glob (string-append dir "/alpha/*.sysml")))
+  (apply append
+    (map (lambda (f) (syster/file-symbols (syster/parse-file f)))
+         (append top-files alpha-files))))
+
+(define symbols (load-campaign-symbols "data/campaign"))
+----
+
+Each `syster/parse-file` call is independent.
+Cross-file qualified-name references work in the SysML source but are not
+resolved at the `HirSymbol` level — use `syster/find-by-name` or
+`syster/find-by-qname` on the concatenated symbol list instead.
 
 == See also
 

@@ -164,7 +164,77 @@ with all definitions from `hello.scm` still in scope:
 Because syster-steel uses a single `Engine` instance for the entire session,
 definitions accumulate across scripts and REPL input.
 
-== 9. Exit
+== 9. Load a script from the REPL
+
+You can load a script file from within a running REPL session without restarting.
+There are two ways to do this.
+
+=== `load` — re-execute a file unconditionally
+
+`load` evaluates every expression in the file as if you had typed them at the prompt.
+It re-executes on every call, which makes it useful when you are editing a script
+and want to reload your changes mid-session.
+
+Start the REPL and load `hello.scm`:
+
+[source,scheme]
+----
+> (load "hello.scm")
+Hello, SysML!
+Hello, Steel!
+> (greet "world")
+"Hello, world!"
+----
+
+Edit `hello.scm` in your editor, then reload it without leaving the REPL:
+
+[source,scheme]
+----
+> (load "hello.scm")
+----
+
+All definitions in the file are re-evaluated and updated in place.
+
+=== `require` — load a module once
+
+`require` loads a file, evaluates it, and brings its `(provide ...)`-exported
+names into scope.
+Unlike `load`, it is cached — requiring the same path a second time is a no-op.
+Use `require` for library modules you want to import cleanly.
+
+Create `greetings.scm` with an explicit export:
+
+[source,scheme]
+----
+;; greetings.scm
+
+(provide greet)
+
+(define (greet name)
+  (string-append "Hello, " name "!"))
+----
+
+Then from the REPL:
+
+[source,scheme]
+----
+> (require "greetings.scm")
+> (greet "Steel")
+"Hello, Steel!"
+----
+
+=== Which to use?
+
+[cols="1,1,1"]
+|===
+| | `load` | `require`
+
+| Re-executes on repeat calls | yes | no — cached
+| Needs `(provide ...)` | no | yes, to export names
+| Good for | iterating on a script | importing a library
+|===
+
+== 10. Exit
 
 Type `(exit)` or press *Ctrl-D*.
 

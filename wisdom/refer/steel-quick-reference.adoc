@@ -124,11 +124,11 @@ The REPL, `-e` expressions, and script files all share the same engine and names
 (require "path/to/module.scm")
 
 ; Import with a prefix
-(require (prefix-in pu: "plantuml.scm"))
+(require (prefix-in pu: "script/plantuml.scm"))
 (pu:generate-bdd symbols)
 
 ; Import only specific names
-(require (only-in "plantuml.scm" generate-bdd write-plantuml-file))
+(require (only-in "script/plantuml.scm" generate-bdd write-plantuml-file))
 
 ; Import a built-in Rust module
 (require-builtin steel/filesystem)

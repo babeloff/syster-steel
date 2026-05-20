@@ -1,3 +1,4 @@
+mod bridge;
 mod cli;
 mod repl;
 
@@ -14,6 +15,7 @@ fn main() -> Result<()> {
 
     let cli = Cli::parse();
     let mut engine = Engine::new();
+    bridge::register(&mut engine);
 
     for path in &cli.load_paths {
         debug!("adding load path: {}", path.display());

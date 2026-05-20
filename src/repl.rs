@@ -1,10 +1,21 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use anyhow::Result;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use steel::steel_vm::engine::Engine;
+use steel::steel_vm::register_fn::RegisterFn;
 
 const HISTORY_FILE: &str = ".syster_steel_history";
 
 pub fn start(engine: &mut Engine) -> Result<()> {
+    let exit_flag = Arc::new(AtomicBool::new(false));
+
+    let flag = Arc::clone(&exit_flag);
+    engine.register_fn("exit", move || {
+        flag.store(true, Ordering::Relaxed);
+    });
+
     let mut rl = DefaultEditor::new()?;
 
     let history_path = dirs::home_dir().map(|h| h.join(HISTORY_FILE));
@@ -38,6 +49,10 @@ pub fn start(engine: &mut Engine) -> Result<()> {
 
                 let _ = rl.add_history_entry(&input);
                 eval_and_print(engine, &input);
+
+                if exit_flag.load(Ordering::Relaxed) {
+                    break;
+                }
             }
 
             Err(ReadlineError::Interrupted) => {

@@ -43,8 +43,8 @@ Create `generate-bdd.scm`:
 ----
 ;; generate-bdd.scm
 ;; Reads vehicle.sysml and writes vehicle-bdd.puml
+;; syster/base functions are registered automatically — no require needed
 
-(require "syster/base")
 (require-builtin steel/process)
 
 ;;; ── helpers ───────────────────────────────────────────────────────────────

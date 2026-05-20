@@ -2,12 +2,12 @@
 :description: Generating BDD, IBD, package, and state machine diagrams from Steel scripts
 :icons: font
 
-Require the necessary modules at the top of your script:
+Require the plantuml library at the top of your script.
+The `syster/base` functions are registered automatically — no require needed for them.
 
 [source,scheme]
 ----
-(require "syster/base")
-(require "plantuml")          ; from wisdom/refer/plantuml.scm
+(require "plantuml")          ; from script/plantuml.scm — run with -L script
 ----
 
 == Block Definition Diagram (BDD)

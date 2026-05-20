@@ -2,16 +2,18 @@
 :description: Complete reference for the plantuml.scm Steel library
 :icons: font
 
-The `plantuml.scm` library lives at `wisdom/refer/plantuml.scm`.
+The `plantuml.scm` library lives at `script/plantuml.scm`.
 Load it with:
 
 [source,scheme]
 ----
-(require "syster/base")
-(require "plantuml")              ; if plantuml.scm is on the load path
+(require "plantuml")              ; if script/ is on the load path (-L script)
 ; or
-(require "wisdom/refer/plantuml.scm")
+(require "script/plantuml.scm")
 ----
+
+The `syster/base` functions (`syster/parse-file`, `hir-symbol/*`, etc.) are
+registered automatically — no `require` is needed for them.
 
 All procedures that generate diagrams accept an optional `opts` hash as their
 last argument.
@@ -195,7 +197,6 @@ Return `"@enduml\n"`.
 
 [source,scheme]
 ----
-(require "syster/base")
 (require "plantuml")
 (require-builtin steel/filesystem)
 

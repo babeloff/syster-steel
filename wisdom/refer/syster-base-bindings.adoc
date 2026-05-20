@@ -2,19 +2,13 @@
 :description: Complete API reference for Steel functions that access syster-base SysML v2 constructs
 :icons: font
 
-These functions are registered with the `steel-core` `Engine` by the syster-steel
-host application using `Engine::register_type` and `Engine::register_value`.
-They are available without any `require` once the host has loaded the `syster/base` module:
+These functions are registered with the `steel-core` `Engine` by `src/bridge.rs`
+using `Engine::register_fn`.
+They are available in every Steel script and REPL session without any `require`.
 
-[source,scheme]
-----
-(require "syster/base")
-----
-
-IMPORTANT: This document describes the intended API.
-Check `src/main.rs` for what is currently registered in the build you are running.
-See xref:../explain/steel-as-extension-language.adoc[Why Steel Scheme]
-for how Rust types are registered with the embedded engine.
+IMPORTANT: The source of truth for what is currently registered is `src/bridge.rs`.
+This document is kept in sync by hand; if a function is missing or behaves
+unexpectedly, check that file first.
 
 == Model functions
 
@@ -25,8 +19,7 @@ Parse a SysML v2 file.
 
 Raises an error if the file cannot be read.
 Parse errors within the file are recoverable —
-the model is still returned with partial content;
-use `syster/check-file` to inspect diagnostics.
+the model is still returned with partial content.
 
 [source,scheme]
 ----
@@ -37,33 +30,6 @@ use `syster/check-file` to inspect diagnostics.
 
 Return all symbols extracted from `model` in definition order.
 The list is flat; nesting is encoded in qualified names.
-
-=== `(syster/check-file model)` → list of `Diagnostic`
-
-Return any parse or semantic diagnostics for `model`.
-
-[source,scheme]
-----
-(for-each
-  (lambda (d)
-    (when (string=? (diagnostic/severity d) "Error")
-      (error (diagnostic/message d))))
-  (syster/check-file model))
-----
-
-== Diagnostic functions
-
-=== `(diagnostic/severity d)` → string
-
-One of `"Error"`, `"Warning"`, `"Info"`, `"Hint"`.
-
-=== `(diagnostic/message d)` → string
-
-Human-readable message text.
-
-=== `(diagnostic/line d)` → integer
-
-1-based start line of the diagnostic span.
 
 == HirSymbol accessors
 
@@ -104,19 +70,23 @@ Returns `"In"`, `"Out"`, or `"InOut"` for directional features; `#f` otherwise.
 
 === `(hir-symbol/multiplicity sym)` → list or `#f`
 
-Returns `(list lower upper)` where each bound is an integer or `#f` (unbounded).
+Returns `(list lower upper)` where each bound is an integer.
+`lower` defaults to `0` when unspecified.
+`upper` is `-1` when unbounded (`*`).
 Returns `#f` if no explicit multiplicity is stated.
 
 [source,scheme]
 ----
 (let ([m (hir-symbol/multiplicity sym)])
   (when m
-    (displayln (string-append
-                "["
-                (if (car m) (number->string (car m)) "0")
-                ".."
-                (if (cadr m) (number->string (cadr m)) "*")
-                "]"))))
+    (let ([lower (car m)]
+          [upper (cadr m)])
+      (displayln (string-append
+                  "["
+                  (number->string lower)
+                  ".."
+                  (if (= upper -1) "*" (number->string upper))
+                  "]")))))
 ----
 
 === `(hir-symbol/doc sym)` → string or `#f`
@@ -158,8 +128,13 @@ One of: `"TypedBy"`, `"Specializes"`, `"Redefines"`, `"Subsets"`,
 
 === `(hir-rel/target rel)` → string
 
-The qualified name of the relationship target.
-May be unresolved (containing `?`) if the target was not found in the model.
+The qualified name of the relationship target as written in source.
+May be unresolved if the target was not found in the model.
+
+=== `(hir-rel/resolved-target rel)` → string or `#f`
+
+The fully-qualified target name after name resolution, or `#f` if the
+target could not be resolved.
 
 [#symbolkind-strings]
 == SymbolKind strings
@@ -178,17 +153,25 @@ May be unresolved (containing `?`) if the target was not found in the model.
 | `"InterfaceDefinition"` | `interface def`
 | `"AllocationDefinition"` | `allocation def`
 | `"ActionDefinition"` | `action def`
+| `"CalculationDefinition"` | `calc def`
 | `"StateDefinition"` | `state def`
 | `"ConstraintDefinition"` | `constraint def`
 | `"RequirementDefinition"` | `requirement def`
 | `"UseCaseDefinition"` | `use case def`
+| `"AnalysisCaseDefinition"` | `analysis def`
+| `"ConcernDefinition"` | `concern def`
 | `"ViewDefinition"` | `view def`
 | `"ViewpointDefinition"` | `viewpoint def`
 | `"RenderingDefinition"` | `rendering def`
 | `"MetadataDefinition"` | `metadata def`
 | `"EnumerationDefinition"` | `enum def`
+| `"Interaction"` | `interaction`
 | `"Class"` | `class`
 | `"DataType"` | `datatype`
+| `"Structure"` | `struct`
+| `"Behavior"` | `behavior`
+| `"Function"` | `function`
+| `"Association"` | `assoc`
 |===
 
 .Usages
@@ -201,16 +184,21 @@ May be unresolved (containing `?`) if the target was not found in the model.
 | `"PortUsage"` | `port`
 | `"ItemUsage"` | `item`
 | `"ActionUsage"` | `action`
+| `"CalculationUsage"` | `calc`
 | `"StateUsage"` | `state`
 | `"TransitionUsage"` | `transition`
 | `"ConnectionUsage"` | `connect`
+| `"FlowConnectionUsage"` | `flow`
 | `"InterfaceUsage"` | `interface`
 | `"AllocationUsage"` | `allocate`
 | `"RequirementUsage"` | `requirement`
 | `"ConstraintUsage"` | `constraint`
+| `"OccurrenceUsage"` | `occurrence`
 | `"ReferenceUsage"` | `ref`
 | `"ViewUsage"` | `view`
 | `"ViewpointUsage"` | `viewpoint`
+| `"RenderingUsage"` | `rendering`
+| `"ExposeRelationship"` | `expose`
 |===
 
 .Other

@@ -68,7 +68,7 @@ Its fields are read through accessor functions registered by the host applicatio
 
 | `(hir-symbol/multiplicity sym)`
 | list or `#f`
-| `(list lower upper)`, `#f` means unbounded
+| `(list lower upper)`; `upper` is `-1` when unbounded
 
 | `(hir-symbol/doc sym)`
 | string or `#f`
@@ -102,18 +102,32 @@ A kind string directly names the `SymbolKind` enum variant on the Rust side.
 
 | `"Package"` | `package Foo { … }`
 | `"PartDefinition"` | `part def Foo { … }`
+| `"ItemDefinition"` | `item def Foo { … }`
 | `"AttributeDefinition"` | `attribute def Mass { … }`
 | `"PortDefinition"` | `port def DrivePort { … }`
 | `"ConnectionDefinition"` | `connection def PowerFlow { … }`
 | `"InterfaceDefinition"` | `interface def …`
+| `"AllocationDefinition"` | `allocation def …`
 | `"ActionDefinition"` | `action def Start { … }`
+| `"CalculationDefinition"` | `calc def …`
 | `"StateDefinition"` | `state def OperationalState { … }`
 | `"RequirementDefinition"` | `requirement def SafetyReq { … }`
 | `"ConstraintDefinition"` | `constraint def …`
+| `"UseCaseDefinition"` | `use case def …`
+| `"AnalysisCaseDefinition"` | `analysis def …`
+| `"ConcernDefinition"` | `concern def …`
 | `"ViewDefinition"` | `view def SystemView { … }`
 | `"ViewpointDefinition"` | `viewpoint def StakeholderVP { … }`
+| `"RenderingDefinition"` | `rendering def …`
 | `"EnumerationDefinition"` | `enum def …`
 | `"MetadataDefinition"` | `metadata def …`
+| `"Interaction"` | `interaction …`
+| `"Class"` | `class …`
+| `"DataType"` | `datatype …`
+| `"Structure"` | `struct …`
+| `"Behavior"` | `behavior …`
+| `"Function"` | `function …`
+| `"Association"` | `assoc …`
 |===
 
 .Usages
@@ -124,13 +138,23 @@ A kind string directly names the `SymbolKind` enum variant on the Rust side.
 | `"PartUsage"` | `part foo : Foo;`
 | `"AttributeUsage"` | `attribute mass : Real;`
 | `"PortUsage"` | `port driveOut : DrivePort;`
+| `"ItemUsage"` | `item foo : Foo;`
 | `"ConnectionUsage"` | `connect engine.driveOut to chassis;`
+| `"FlowConnectionUsage"` | `flow …`
+| `"InterfaceUsage"` | `interface …`
+| `"AllocationUsage"` | `allocate …`
 | `"ActionUsage"` | `action start : Start;`
+| `"CalculationUsage"` | `calc …`
 | `"StateUsage"` | `state operationalState : OperationalState;`
 | `"TransitionUsage"` | `transition … then …`
 | `"RequirementUsage"` | `requirement safetyReq : SafetyReq;`
+| `"ConstraintUsage"` | `constraint …`
+| `"OccurrenceUsage"` | `occurrence …`
 | `"ViewUsage"` | `view systemView : SystemView { … }`
+| `"ViewpointUsage"` | `viewpoint …`
+| `"RenderingUsage"` | `rendering …`
 | `"ReferenceUsage"` | `ref …`
+| `"ExposeRelationship"` | `expose …`
 |===
 
 == Relationships
@@ -151,8 +175,12 @@ A `HirRelationship` records a directed typed edge from one symbol to another.
 | `"Specializes"` | `part def ElectricEngine :> Engine`
 | `"Redefines"` | `:>>` redefines a feature
 | `"Subsets"` | `subsets` relationship
+| `"References"` | cross-reference to another element
 | `"Satisfies"` | `satisfy` requirement
 | `"Performs"` | `perform` action
+| `"Exhibits"` | `exhibit` state
+| `"Includes"` | `include` use case
+| `"Asserts"` | `assert` constraint
 | `"Verifies"` | `verify` requirement
 |===
 

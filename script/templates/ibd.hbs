@@ -1,0 +1,11 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{theme}}
+{{{direction}}}
+
+package "{{{name}}}" {
+{{#each parts}}  [{{{name}}}]
+{{/each}}{{#each ports}}  () "{{{name}}}"
+{{/each}}}
+
+@enduml

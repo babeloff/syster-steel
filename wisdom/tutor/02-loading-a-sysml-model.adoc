@@ -15,35 +15,12 @@ See xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings] for the 
 
 == 1. Create a sample SysML v2 model
 
-Save the following as `vehicle.sysml`:
+Save a copy of `data/docs/vehicle.sysml` in your working directory,
+or create `vehicle.sysml` with these contents:
 
 [source,sysml]
 ----
-package VehicleModel {
-
-    part def VehicleSystem {
-        attribute mass : Real;
-        attribute velocity : Real;
-
-        part engine : Engine;
-        part chassis : Chassis;
-        port drivePort : DrivePort;
-    }
-
-    part def Engine {
-        attribute power : Real;
-        attribute efficiency : Real;
-        port fuelIn : FuelPort;
-        port driveOut : DrivePort;
-    }
-
-    part def Chassis {
-        attribute weight : Real;
-    }
-
-    port def DrivePort;
-    port def FuelPort;
-}
+include::../../data/docs/vehicle.sysml[]
 ----
 
 == 2. Load the model in the REPL
@@ -58,8 +35,11 @@ Parse the file:
 
 [source,scheme]
 ----
-> (define model (syster/parse-file "vehicle.sysml"))
-> model
+(define model (syster/parse-file "vehicle.sysml"))
+model
+----
+
+----
 #<SysmlModel vehicle.sysml>
 ----
 
@@ -67,8 +47,11 @@ Parse the file:
 
 [source,scheme]
 ----
-> (define symbols (syster/file-symbols model))
-> (length symbols)
+(define symbols (syster/file-symbols model))
+(length symbols)
+----
+
+----
 7
 ----
 
@@ -80,12 +63,15 @@ Use accessor functions to inspect it.
 
 [source,scheme]
 ----
-> (define first-sym (car symbols))
-> (hir-symbol/name first-sym)
+(define first-sym (car symbols))
+(hir-symbol/name first-sym)
+(hir-symbol/kind first-sym)
+(hir-symbol/qualified-name first-sym)
+----
+
+----
 "VehicleModel"
-> (hir-symbol/kind first-sym)
 "Package"
-> (hir-symbol/qualified-name first-sym)
 "VehicleModel"
 ----
 
@@ -93,11 +79,14 @@ Use accessor functions to inspect it.
 
 [source,scheme]
 ----
-> (define part-defs
-    (filter (lambda (s)
-              (string=? (hir-symbol/kind s) "PartDefinition"))
-            symbols))
-> (map hir-symbol/name part-defs)
+(define part-defs
+  (filter (lambda (s)
+            (string=? (hir-symbol/kind s) "PartDefinition"))
+          symbols))
+(map hir-symbol/name part-defs)
+----
+
+----
 '("VehicleSystem" "Engine" "Chassis")
 ----
 
@@ -110,15 +99,18 @@ for the complete list.
 
 [source,scheme]
 ----
-> (define vs (car part-defs))          ; VehicleSystem
-> (hir-symbol/name vs)
+(define vs (car part-defs))          ; VehicleSystem
+(hir-symbol/name vs)
+(define rels (hir-symbol/relationships vs))
+(length rels)
+(map (lambda (r)
+       (list (hir-rel/kind r) (hir-rel/target r)))
+     rels)
+----
+
+----
 "VehicleSystem"
-> (define rels (hir-symbol/relationships vs))
-> (length rels)
 2
-> (map (lambda (r)
-         (list (hir-rel/kind r) (hir-rel/target r)))
-       rels)
 '(("TypedBy" "Engine") ("TypedBy" "Chassis"))
 ----
 

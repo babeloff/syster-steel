@@ -12,8 +12,12 @@ Load it with:
 (require "script/plantuml.scm")
 ----
 
-The `syster/base` functions (`syster/parse-file`, `hir-symbol/*`, etc.) are
-registered automatically — no `require` is needed for them.
+The `syster/base` functions (`syster/parse-file`, `hir-symbol/*`, etc.) and the
+`hbs/*` functions are registered automatically — no `require` is needed for them.
+
+On load, `plantuml.scm` creates a shared Handlebars registry `*hbs*` and registers
+the five templates from `*templates-dir*` (default: `"script/templates"`).
+All diagram generators call `(hbs/render *hbs* ...)` internally.
 
 All procedures that generate diagrams accept an optional `opts` hash as their
 last argument.
@@ -39,14 +43,11 @@ Derives inheritance lines from `Specializes` relationships.
 |===
 | Key | Type | Default | Effect
 
-| `"title"` | string or `#f` | `#f` | Add a `title` directive
-| `"show-attrs"` | boolean | `#t` | Include `AttributeUsage` in class boxes
-| `"show-ports"` | boolean | `#t` | Include `PortUsage` in class boxes
-| `"show-doc"` | boolean | `#f` | Add documentation as a `note`
+| `"title"` | string | `""` | Add a `title` directive
 | `"theme"` | string | `"default"` | PlantUML `!theme` directive
-| `"attr-visibility"` | string | `"+"` | Visibility prefix for attributes
-| `"port-visibility"` | string | `"~"` | Visibility prefix for ports
 |===
+
+Output structure is controlled by `script/templates/bdd.hbs`.
 
 === `(generate-ibd parent-sym symbols [opts])` → string
 
@@ -66,27 +67,32 @@ Selects `ConnectionUsage` symbols for connector lines.
 |===
 | Key | Type | Default | Effect
 
-| `"title"` | string or `#f` | `#f` | Diagram title
-| `"show-ports"` | boolean | `#t` | Render port boxes on components
+| `"title"` | string | `""` | Diagram title
 | `"direction"` | string | `"left to right direction"` | Diagram flow direction
 |===
 
+Output structure is controlled by `script/templates/ibd.hbs`.
+
 === `(generate-package-diagram symbols [opts])` → string
 
-Generate a package diagram showing packages and import relationships.
+Generate a package diagram showing packages and their contents.
 
-Selects `Package` symbols and `Import` entries.
+Selects `Package` symbols and their direct children.
+Output structure is controlled by `script/templates/package.hbs`.
 
 [source,scheme]
 ----
 (define puml (generate-package-diagram (syster/file-symbols model)))
 ----
 
+Accepts `"title"` and `"theme"` options.
+
 === `(generate-state-machine sym symbols [opts])` → string
 
 Generate a state machine diagram for a `StateDefinition` symbol.
 
 Selects `StateUsage` and `TransitionUsage` children of `sym`.
+Output structure is controlled by `script/templates/state-machine.hbs`.
 
 [source,scheme]
 ----
@@ -94,19 +100,23 @@ Selects `StateUsage` and `TransitionUsage` children of `sym`.
 (define puml     (generate-state-machine op-state symbols))
 ----
 
-=== `(generate-sequence-diagram sym symbols [opts])` → string
+Accepts a `"title"` option; the title defaults to `"<name> State Machine"`.
 
-Generate a sequence / interaction diagram for an `ActionDefinition` or
-`Interaction` symbol.
+=== `(generate-viewpoints-diagram symbols [opts])` → string
 
-Selects `ActionUsage`, `SendActionUsage`, and `AcceptActionUsage` members.
+Generate a diagram showing viewpoints, view definitions, renderings, and their
+instantiation and rendering relationships.
 
-=== `(generate-use-case-diagram symbols [opts])` → string
+Selects `ViewpointDefinition`, `ViewDefinition`, `RenderingDefinition`, and
+`ViewUsage` symbols.
+Output structure is controlled by `script/templates/viewpoints.hbs`.
 
-Generate a use case diagram.
+[source,scheme]
+----
+(define puml (generate-viewpoints-diagram (syster/file-symbols model)))
+----
 
-Selects `UseCaseDefinition` and `UseCaseUsage` symbols;
-renders actors from `ViewpointDefinition` stakeholders.
+Accepts `"title"` and `"theme"` options.
 
 == File output
 
@@ -195,38 +205,16 @@ Return `"@enduml\n"`.
 
 == Complete example
 
+The script `script/examples/vehicle-diagrams.scm` shows the full pipeline:
+
 [source,scheme]
 ----
-(require "plantuml")
-(require-builtin steel/filesystem)
-
-(define model   (syster/parse-file "vehicle.sysml"))
-(define symbols (syster/file-symbols model))
-
-(unless (path-exists? "out")
-  (create-directory! "out"))
-
-; BDD for the whole model
-(write-plantuml-file
-  (generate-bdd symbols
-    (hash "title" "Vehicle System — Block Definition Diagram"
-          "theme" "plain"))
-  "out/vehicle-bdd.puml")
-(render-diagram "out/vehicle-bdd.puml" "svg")
-
-; IBD for VehicleSystem
-(define vs (syster/find-by-name symbols "VehicleSystem"))
-(write-plantuml-file
-  (generate-ibd vs symbols
-    (hash "title" "VehicleSystem — Internal Block Diagram"))
-  "out/vehicle-ibd.puml")
-(render-diagram "out/vehicle-ibd.puml" "svg")
-
-(displayln "Done — diagrams written to out/")
+include::../../script/examples/vehicle-diagrams.scm[]
 ----
 
 == See also
 
+* xref:hbs-bindings.adoc[Handlebars Steel bindings reference]
 * xref:syster-base-bindings.adoc[syster-base Steel bindings reference]
 * xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]
 * xref:../instruct/render-diagrams.adoc[How to render diagrams]

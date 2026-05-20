@@ -1,0 +1,155 @@
+= Handlebars Steel bindings reference
+:description: Steel API for the Handlebars template engine (hbs/*)
+:icons: font
+
+The `hbs/*` functions expose the
+https://github.com/sunng87/handlebars-rust[handlebars-rust] template engine to
+Steel scripts.
+They are registered automatically when `syster-steel` starts — no `require` is
+needed.
+
+`plantuml.scm` uses these functions internally.
+Use them directly when you need custom templates or rendering behaviour beyond
+what `plantuml.scm` provides.
+
+== Registry management
+
+=== `(hbs/new)` → opaque registry
+
+Create a new, empty Handlebars template registry.
+HTML escaping is disabled so that PlantUML angle brackets and quotes are emitted
+verbatim.
+
+[source,scheme]
+----
+(define hbs (hbs/new))
+----
+
+=== `(hbs/register-template! hbs name template-str)` → void
+
+Register a template from an inline string under `name`.
+
+[source,scheme]
+----
+(hbs/register-template! hbs "greeting" "Hello, {{name}}!")
+----
+
+=== `(hbs/register-template-file! hbs name path)` → void
+
+Register a template loaded from `path` under `name`.
+`path` is resolved relative to the process working directory.
+
+[source,scheme]
+----
+(hbs/register-template-file! hbs "bdd" "script/templates/bdd.hbs")
+----
+
+== Rendering
+
+=== `(hbs/render hbs name data)` → string
+
+Render the named template with `data` and return the result as a string.
+
+`data` may be any Steel value.
+The conversion to a Handlebars context follows the table below.
+
+[cols="1,1"]
+|===
+| Steel value | Handlebars context (JSON)
+
+| boolean | boolean
+| integer | number
+| float   | number (`null` if not finite)
+| string  | string
+| list    | array  (elements converted recursively)
+| hash-map | object (string keys only; non-string keys are skipped)
+| anything else | null
+|===
+
+[source,scheme]
+----
+(hbs/render hbs "bdd"
+  (hash "title"       "Vehicle System BDD"
+        "theme"       "plain"
+        "definitions" (list (hash "name" "VehicleSystem"
+                                  "attrs" (list (hash "name" "mass"))
+                                  "ports" (list (hash "name" "drivePort"))
+                                  "is_abstract" #f))))
+----
+
+=== `(hbs/render-str hbs template-str data)` → string
+
+Render an inline template string without prior registration.
+Useful for short, one-off templates.
+
+[source,scheme]
+----
+(hbs/render-str hbs "Hello, {{{name}}}!" (hash "name" "SysML"))
+----
+
+== Template syntax
+
+Handlebars uses double-brace `{{...}}` expressions.
+
+[cols="2,3"]
+|===
+| Syntax | Meaning
+
+| `{{key}}` | Emit the value of `key`
+| `{{{key}}}` | Emit `key` without escaping (explicit unescaped form)
+| `{{#if key}}...{{/if}}` | Conditional — falsy values: `false`, `null`, `""`, `[]`, `{}`, `0`
+| `{{#each list}}...{{/each}}` | Iterate a list; current element is available as `{{this}}`
+| `{{#each obj}}...{{/each}}` | Iterate an object; `{{@key}}` is the key, `{{this}}` the value
+| `{{! comment }}` | Template comment — not emitted
+|===
+
+Because `hbs/new` disables HTML escaping, `{{key}}` and `{{{key}}}` are
+equivalent for all values in a registry created by `(hbs/new)`.
+
+See the https://handlebarsjs.com/guide/[Handlebars language guide] for the full
+syntax including partials, helpers, and block helpers.
+
+== Templates bundled with plantuml.scm
+
+`plantuml.scm` creates a shared registry `*hbs*` at load time and registers the
+following templates from `*templates-dir*` (default: `"script/templates"`):
+
+[cols="1,1,3"]
+|===
+| Name | File | Used by
+
+| `"bdd"`           | `bdd.hbs`           | `generate-bdd`
+| `"ibd"`           | `ibd.hbs`           | `generate-ibd`
+| `"state-machine"` | `state-machine.hbs` | `generate-state-machine`
+| `"package"`       | `package.hbs`       | `generate-package-diagram`
+| `"viewpoints"`    | `viewpoints.hbs`    | `generate-viewpoints-diagram`
+|===
+
+=== Override the templates directory
+
+Set `*templates-dir*` before the first `(require "plantuml")`.
+Templates are registered once at load time and cached by Steel's module system.
+
+[source,scheme]
+----
+(define *templates-dir* "my/custom/templates")
+(require "plantuml")
+----
+
+=== Add templates to the shared registry
+
+After `plantuml.scm` is loaded, `*hbs*` is accessible and accepts additional
+templates:
+
+[source,scheme]
+----
+(require "plantuml")
+(hbs/register-template-file! *hbs* "my-bdd" "my/templates/my-bdd.hbs")
+(hbs/render *hbs* "my-bdd" data)
+----
+
+== See also
+
+* xref:plantuml-procedures.adoc[PlantUML generation procedures reference]
+* xref:../explain/plantuml-pipeline.adoc[The SysML → PlantUML → SVG pipeline]
+* xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]

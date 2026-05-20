@@ -1,0 +1,10 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{theme}}
+[*] --> {{{initial_state}}}
+{{#each states}}
+state "{{{name}}}" as {{{alias}}}
+{{/each}}
+{{#each transitions}}{{{source_alias}}} --> {{{target_alias}}} : {{{guard}}}
+{{/each}}
+@enduml

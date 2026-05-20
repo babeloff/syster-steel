@@ -1,0 +1,9 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{theme}}
+{{#each packages}}
+package "{{{name}}}" {
+{{#each children}}  [{{{name}}}]
+{{/each}}}
+{{/each}}
+@enduml

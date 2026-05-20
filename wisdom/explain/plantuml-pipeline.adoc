@@ -15,7 +15,11 @@ SysML v2 text file
         ▼
    list of HirSymbol
         │
-        │  Steel script (filter + transform)
+        │  Steel script (filter + build data hash)
+        ▼
+   data hash (hash-maps and lists)
+        │
+        │  hbs/render  (Handlebars template in script/templates/)
         ▼
    PlantUML source (.puml)
         │
@@ -70,11 +74,43 @@ Filtering is the first job of the Steel script.
          exposes)))
 ----
 
-== Stage 3: PlantUML generation
+== Stage 3: Data transformation
 
-Each diagram type is a mapping from a filtered symbol list to a PlantUML source string.
-PlantUML's text format is line-oriented,
-so `string-append` and `map` are the core operations.
+Each diagram type is a function that maps a filtered symbol list to a Scheme data
+hash (nested hash-maps and lists).
+The data hash captures the diagram's content — definitions, relationships,
+state transitions — in a form that is independent of any output format.
+
+[source,scheme]
+----
+; build-bdd-data returns a hash ready for hbs/render
+(define data
+  (hash "title"        "Vehicle System"
+        "theme"        "plain"
+        "definitions"  (list (hash "name" "VehicleSystem" "attrs" ...))
+        "compositions" (list (hash "parent" "VehicleSystem" "child" "Engine"
+                                   "role" "engine"))))
+----
+
+== Stage 4: Template rendering — `hbs/render`
+
+`plantuml.scm` passes the data hash to a Handlebars template via `hbs/render`.
+Templates live in `script/templates/` and declare the PlantUML structure;
+scripts supply only the data.
+
+[source,scheme]
+----
+(hbs/render *hbs* "bdd" data)   ; renders script/templates/bdd.hbs
+----
+
+To customise output, edit the `.hbs` template or point `*templates-dir*` at your
+own template directory before requiring `plantuml`.
+
+The `hbs/*` functions are registered automatically at engine startup.
+See xref:../refer/hbs-bindings.adoc[Handlebars Steel bindings reference] for
+the full `hbs/*` API.
+
+== Stage 5: PlantUML examples
 
 === Block Definition Diagram
 
@@ -114,7 +150,7 @@ engine -right-> chassis : driveShaft
 Selects `Package` symbols and `Import` relationships,
 rendering packages as namespaces and imports as dashed arrows.
 
-== Stage 4: Rendering — `plantuml`
+== Stage 6: Rendering — `plantuml`
 
 PlantUML is a Java application that reads `.puml` source and writes image files.
 The Steel script invokes it via `steel/process`:
@@ -133,6 +169,15 @@ The Steel script invokes it via `steel/process`:
 | `-pdf` | PDF | Suitable for print documents
 | `-txt` | ASCII art | Useful for terminals
 |===
+
+== Why Handlebars templates?
+
+Separating the data-building step (Steel scripts) from the formatting step
+(`.hbs` templates) keeps each concern in its natural representation.
+Scripts work with typed SysML data; templates declare the PlantUML structure.
+Changing diagram style — adding skinparam directives, switching layout direction,
+reformatting class boxes — requires editing only the template, not the script.
+Conversely, adding a new symbol kind to the diagram requires editing only the script.
 
 == Why PlantUML rather than direct SVG generation?
 
@@ -171,3 +216,4 @@ rather than dumping every element in the file.
 * xref:sysml-model-in-steel.adoc[How SysML models are represented in Steel]
 * xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]
 * xref:../refer/plantuml-procedures.adoc[PlantUML generation procedures reference]
+* xref:../refer/hbs-bindings.adoc[Handlebars Steel bindings reference]

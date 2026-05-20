@@ -3,11 +3,22 @@
 :icons: font
 
 Require the plantuml library at the top of your script.
-The `syster/base` functions are registered automatically — no require needed for them.
+The `syster/base` and `hbs/*` functions are registered automatically — no require
+needed for them.
 
 [source,scheme]
 ----
 (require "plantuml")          ; from script/plantuml.scm — run with -L script
+----
+
+`plantuml.scm` loads Handlebars templates from `script/templates/` on startup.
+Run scripts from the project root so the path resolves correctly, or set
+`*templates-dir*` before the first `require`:
+
+[source,scheme]
+----
+(define *templates-dir* "path/to/templates")
+(require "plantuml")
 ----
 
 == Block Definition Diagram (BDD)
@@ -83,10 +94,8 @@ All generators accept an optional options hash as their last argument:
 ----
 (write-plantuml-file
   (generate-bdd symbols
-    (hash "theme"        "plain"
-          "show-ports"   #t
-          "show-attrs"   #t
-          "title"        "Vehicle System BDD"))
+    (hash "theme" "plain"
+          "title" "Vehicle System BDD"))
   "vehicle-bdd.puml")
 ----
 
@@ -94,31 +103,24 @@ All generators accept an optional options hash as their last argument:
 |===
 | Option key | Type | Default | Effect
 
-| `"theme"`
-| string
-| `"default"`
-| PlantUML skinparam preset
-
-| `"show-ports"`
-| boolean
-| `#t`
-| Include port usages in class boxes
-
-| `"show-attrs"`
-| boolean
-| `#t`
-| Include attribute usages
-
-| `"title"`
-| string
-| `#f`
-| Add a `title` directive
-
-| `"show-doc"`
-| boolean
-| `#f`
-| Add doc comments as notes
+| `"title"` | string | `""` | Add a `title` directive
+| `"theme"` | string | `"default"` | PlantUML `!theme` directive
+| `"direction"` | string | `"left to right direction"` | IBD layout direction (IBD only)
 |===
+
+== Customise the templates
+
+The PlantUML structure is defined by Handlebars templates in `script/templates/`.
+To change how diagrams look — adding `skinparam` directives, reformatting class boxes,
+switching relationship notation — edit the relevant `.hbs` file directly.
+
+To use a parallel set of templates without modifying the originals, copy the
+`script/templates/` directory and point `*templates-dir*` at the copy before requiring
+`plantuml`.
+
+See xref:../refer/hbs-bindings.adoc[Handlebars Steel bindings reference] for the full
+`hbs/*` API, including how to register additional templates into the shared `*hbs*`
+registry.
 
 == Write to a specific directory
 

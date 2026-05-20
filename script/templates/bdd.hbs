@@ -1,0 +1,17 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{theme}}
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+{{#each definitions}}
+class "{{{name}}}"{{#if is_abstract}} abstract{{/if}} <<block>> {
+{{#each attrs}}  + {{{name}}}
+{{/each}}{{#each ports}}  ~ {{{name}}}
+{{/each}}}
+{{/each}}
+{{#each inheritances}}"{{{parent}}}" <|-- "{{{child}}}"
+{{/each}}
+{{#each compositions}}"{{{parent}}}" *-- "{{{child}}}" : {{{role}}}
+{{/each}}
+@enduml

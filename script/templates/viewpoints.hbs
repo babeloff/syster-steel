@@ -1,0 +1,32 @@
+@startuml
+{{#if title}}title {{{title}}}
+{{/if}}!theme {{theme}}
+left to right direction
+{{#if viewpoints}}
+package "Viewpoints" {
+{{#each viewpoints}}  hexagon "{{{name}}}" as {{{alias}}}
+{{/each}}}
+{{/if}}
+{{#if view_definitions}}
+package "View Definitions" {
+{{#each view_definitions}}  rectangle "{{{name}}}" as {{{alias}}}
+{{/each}}}
+{{/if}}
+{{#if renderings}}
+package "Renderings" {
+{{#each renderings}}  file "{{{name}}}" as {{{alias}}}
+{{/each}}}
+{{/if}}
+{{#if view_usages}}
+package "Views" {
+{{#each view_usages}}  rectangle "{{{name}}}" as {{{alias}}}
+{{/each}}}
+{{/if}}
+{{#if instantiations}}
+' --- relationships ---
+{{#each instantiations}}{{{child_alias}}} ..|> {{{parent_alias}}} : instantiates
+{{/each}}{{/if}}
+{{#if render_edges}}
+{{#each render_edges}}{{{view_alias}}} ..> {{{rendering_alias}}} : renders with
+{{/each}}{{/if}}
+@enduml

@@ -8,11 +8,11 @@ needed for them.
 
 [source,scheme]
 ----
-(require "plantuml.scm")          ; run with -L script so script/ is on the load path
+(require "plantuml.scm")          ; run with -L steel so steel/ is on the load path
 ----
 
 `plantuml.scm` loads all sub-libraries and registers ten Handlebars templates from
-`script/templates/` on startup.  Run scripts from the project root so the path
+`steel/templates/` on startup.  Run scripts from the project root so the path
 resolves correctly, or override the directory before the first `require`:
 
 [source,scheme]
@@ -194,7 +194,7 @@ All generators accept an optional options hash as their last argument:
 
 == Customise the templates
 
-The PlantUML structure is defined by Handlebars templates in `script/templates/`.
+The PlantUML structure is defined by Handlebars templates in `steel/templates/`.
 To change diagram styling — adding `skinparam` directives, reformatting boxes,
 switching relationship notation — edit the relevant `.hbs` file directly.
 

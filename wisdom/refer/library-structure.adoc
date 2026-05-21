@@ -1,8 +1,8 @@
 = Script library structure
-:description: Layout and loading conventions for the script/ Steel Scheme library suite
+:description: Layout and loading conventions for the steel/ Steel Scheme library suite
 :icons: font
 
-The `script/` directory is organized as a suite of Steel Scheme libraries.
+The `steel/` directory is organized as a suite of Steel Scheme libraries.
 `plantuml.scm` is the recommended entry point — it defines all diagram generators
 inline and provides a unified API without requiring sub-library imports.
 
@@ -19,7 +19,7 @@ closure resolves its references within the same module scope.
 == File layout
 
 ----
-script/
+steel/
 ├── sysml-util.scm            — Shared utilities (pu-alias, filter-kind, rel-targets, …)
 ├── plantuml.scm              — All-in-one: all generators + *hbs* registry (inline, no sub-library requires)
 ├── plantuml-action.scm       — Standalone action flow generator  (explicit hbs arg)
@@ -95,7 +95,7 @@ They are useful when you want to use one diagram type without loading the full s
 
 [source,scheme]
 ----
-; Run with: syster-steel -L script script/my-script.scm
+; Run with: syster-steel -L steel steel/my-script.scm
 (require "plantuml.scm")
 
 (define model   (syster/parse-file "data/model.sysml"))
@@ -116,7 +116,7 @@ argument when called directly:
 (require "sysml-util.scm")
 (require "plantuml-requirement.scm")
 
-(define my-hbs (make-requirement-hbs "script/templates"))
+(define my-hbs (make-requirement-hbs "steel/templates"))
 (define model  (syster/parse-file "data/model.sysml"))
 (define syms   (syster/file-symbols model))
 

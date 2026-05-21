@@ -3,13 +3,13 @@
 ;; Generates self-documenting diagrams for the syster-steel project itself.
 ;;
 ;; Usage (from project root):
-;;   syster-steel -L script script/gen-self-diagrams.scm
+;;   syster-steel -L steel steel/gen-self-diagrams.scm
 ;;
 ;; Override directories:
-;;   syster-steel -L script \
+;;   syster-steel -L steel \
 ;;     -e '(define *self-data-dir* "data/self")' \
 ;;     -e '(define *self-out-dir*  "wisdom/diagrams-gen")' \
-;;     script/gen-self-diagrams.scm
+;;     steel/gen-self-diagrams.scm
 
 (require "plantuml.scm")
 (require-builtin steel/filesystem)

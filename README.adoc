@@ -42,10 +42,10 @@ syster-steel --version
 syster-steel
 
 # Run a script
-syster-steel -L script script/gen-plantuml.scm
+syster-steel -L steel steel/gen-plantuml.scm
 
 # Run a script, then stay in the REPL
-syster-steel -i -L script script/gen-plantuml.scm
+syster-steel -i -L steel steel/gen-plantuml.scm
 
 # Evaluate an inline expression
 syster-steel -e "(displayln (+ 1 2))"
@@ -121,7 +121,7 @@ cargo build --release
 
 | https://crates.io/crates/handlebars[handlebars]
 | 6
-| Handlebars template engine — renders PlantUML source from `script/templates/*.hbs`
+| Handlebars template engine — renders PlantUML source from `steel/templates/*.hbs`
 via the `hbs/*` Steel bindings in `src/hbs.rs`
 
 | https://crates.io/crates/serde_json[serde_json]
@@ -148,10 +148,10 @@ syster-steel (this crate)
     │  registers hbs/* template API  — src/hbs.rs
     │  runs scripts via Engine::run
     ▼
-Steel Scheme scripts (script/)
+Steel Scheme scripts (steel/)
     │  filter symbols → data hash → hbs/render
     ▼
-Handlebars templates (script/templates/)
+Handlebars templates (steel/templates/)
     │  render PlantUML source
     ▼
 plantuml → SVG / PNG / PDF
@@ -202,7 +202,7 @@ syster-steel/
 │   ├── hbs.rs         — registers hbs/* Handlebars bindings with the Engine
 │   ├── cli.rs         — clap argument definitions
 │   └── repl.rs        — rustyline REPL with multi-line input and history
-├── script/
+├── steel/
 │   ├── sysml-util.scm          — shared utilities (pu-alias, filter-kind, rel-targets, …)
 │   ├── plantuml.scm            — all-in-one library: all generators + *hbs* registry
 │   ├── plantuml-action.scm     — standalone action flow generator (explicit hbs arg)
@@ -228,7 +228,8 @@ syster-steel/
 │   └── gen-self-diagrams.nu — nushell script: detect syster-steel, run gen-self, optionally render
 ├── Cargo.toml
 ├── pixi.toml          — build tasks and conda environment
-├── recipe.yaml        — rattler-build conda package recipe
+├── recipes/
+│   └── recipe.yaml    — rattler-build conda package recipe
 └── LICENSE
 ----
 

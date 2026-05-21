@@ -1,27 +1,33 @@
 [package]
-name = "syster-steel"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.85"
-authors = ["Fredrick Eisele <fred.eisele@vanderbilt.edu>"]
-license = "MIT"
-description = "SysML v2 scripting via Steel Scheme"
+authors = ['Fredrick Eisele <fred.eisele@vanderbilt.edu>']
+description = 'SysML v2 scripting via Steel Scheme'
+edition = '2024'
+license = 'MIT'
+name = 'syster-steel'
+rust-version = '1.85'
+version = '0.1.1'
 
 [[bin]]
-name = "syster-steel"
-path = "src/main.rs"
+name = 'syster-steel'
+path = 'src/main.rs'
 
 [dependencies]
-steel-core = "0.8.2"
-syster-base = "0.4.0-alpha"
-clap = { version = "4", features = ["derive"] }
-rustyline = "14"
-anyhow = "1"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-dirs = "5"
-handlebars = "6"
-serde_json = "1"
-glob = "0.3"
+anyhow = '1'
+dirs = '5'
+glob = '0.3'
+handlebars = '6'
+rustyline = '14'
+serde_json = '1'
+steel-core = '0.8.2'
+syster-base = '0.4.0-alpha'
+tracing = '0.1'
+
+[dependencies.clap]
+features = ['derive']
+version = '4'
+
+[dependencies.tracing-subscriber]
+features = ['env-filter']
+version = '0.3'
 
 [dev-dependencies]

@@ -8,8 +8,8 @@
 ;; with an explicit hbs registry parameter; do not require them here.
 ;;
 ;; Load with:
-;;   (require "plantuml.scm")         ; if script/ is on the load path (-L script)
-;;   (require "script/plantuml.scm") ; from project root
+;;   (require "plantuml.scm")         ; if steel/ is on the load path (-L steel)
+;;   (require "steel/plantuml.scm") ; from project root
 ;;
 ;; Override the templates directory before the first require:
 ;;   (define *templates-dir* "path/to/templates")
@@ -63,7 +63,7 @@
 
 ;; ── Template registry ─────────────────────────────────────────────────────────
 
-(define *templates-dir* "script/templates")
+(define *templates-dir* "steel/templates")
 
 (define *hbs* (hbs/new))
 

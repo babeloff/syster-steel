@@ -83,11 +83,11 @@ Create it first if needed:
 
 == Use a helper from the plantuml library
 
-Run with `-L script` so `plantuml.scm` is found on the load path.
+Run with `-L steel` so `plantuml.scm` is found on the load path.
 
 [source,scheme]
 ----
-(require "plantuml.scm")   ; script/plantuml.scm
+(require "plantuml.scm")   ; steel/plantuml.scm
 
 (render-diagram "vehicle-bdd.puml" "svg")
 (render-diagram "vehicle-bdd.puml" "png")

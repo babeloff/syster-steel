@@ -24,17 +24,17 @@ include::../../data/docs/vehicle.sysml[]
 
 == 2. Write the generation script
 
-The script `script/gen-bdd.scm` implements the pipeline end-to-end:
+The script `steel/gen-bdd.scm` implements the pipeline end-to-end:
 
 [source,scheme]
 ----
-include::../../script/gen-bdd.scm[]
+include::../../steel/gen-bdd.scm[]
 ----
 
 == 3. Run the script
 
 ----
-syster-steel script/gen-bdd.scm
+syster-steel steel/gen-bdd.scm
 ----
 
 [source,scheme]

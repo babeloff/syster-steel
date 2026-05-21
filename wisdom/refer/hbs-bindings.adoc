@@ -41,7 +41,7 @@ Register a template loaded from `path` under `name`.
 
 [source,scheme]
 ----
-(hbs/register-template-file! hbs "bdd" "script/templates/bdd.hbs")
+(hbs/register-template-file! hbs "bdd" "steel/templates/bdd.hbs")
 ----
 
 == Rendering
@@ -112,7 +112,7 @@ syntax including partials, helpers, and block helpers.
 == Templates bundled with plantuml.scm
 
 `plantuml.scm` creates a shared registry `*hbs*` at load time and registers
-the following templates from `*templates-dir*` (default: `"script/templates"`).
+the following templates from `*templates-dir*` (default: `"steel/templates"`).
 Sub-libraries each have a `make-*-hbs` factory that registers only their own
 template when used independently.
 

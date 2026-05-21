@@ -1,86 +1,87 @@
 [workspace]
-authors = ["Fredrick Eisele <fred.eisele@vanderbilt.edu>"]
-channels = ["https://prefix.dev/meso-forge", "conda-forge"]
-name = "syster-steel"
-platforms = ["linux-64"]
-version = "0.1.0"
+authors = ['Fredrick Eisele <fred.eisele@vanderbilt.edu>']
+channels = ['https://prefix.dev/meso-forge', 'conda-forge']
+name = 'syster-steel'
+platforms = ['linux-64']
+version = '0.1.1'
 
-[tasks.check]
-cmd = "cargo clippy --all-targets"
-description = "Lint all targets with Clippy"
-
+[tasks]
 [tasks.build]
-cmd = "cargo build"
-description = "Compile the binary in debug mode"
-
-[tasks.test]
-cmd = "cargo test"
-description = "Run the test suite"
-
-[tasks.fmt]
-cmd = "cargo fmt"
-description = "Format source code with rustfmt"
-
-[tasks.fmt-check]
-cmd = "cargo fmt -- --check"
-description = "Check formatting without modifying files"
-
-[tasks.run]
-cmd = "cargo run --"
-description = "Run a Steel script: pixi run run <script.scm>"
-
-[tasks.repl]
-cmd = "cargo run"
-description = "Start the interactive Steel Scheme REPL"
-
-[tasks.sync-version]
-cmd = "dasel put -f pixi.toml -t string -v $(dasel -f Cargo.toml '.package.version') 'workspace.version'"
-description = "Copy the version from Cargo.toml into pixi.toml"
-
-[tasks.set-version]
-cmd = "sd '(?m)^version = \"[^\"]+\"' 'version = \"'\"$VERSION\"'\"' Cargo.toml pixi.toml"
-description = "Set an explicit version in both Cargo.toml and pixi.toml (pass VERSION=x.y.z)"
+cmd = 'cargo build'
+description = 'Compile the binary in debug mode'
 
 [tasks.bump-alpha]
-cmd = "cargo set-version --bump patch && pixi run sync-version"
-description = "Bump the patch version and sync it to pixi.toml"
+cmd = 'nu pixi-script/bump-alpha.nu'
+description = 'Bump the patch version and sync it to pixi.toml'
+
+[tasks.check]
+cmd = 'cargo clippy --all-targets'
+description = 'Lint all targets with Clippy'
 
 [tasks.clean]
-cmd = "rm -rf output/"
-description = "Remove stale rattler-build output packages"
+cmd = 'nu pixi-script/clean.nu'
+description = 'Remove stale rattler-build output packages'
 
-[tasks.package]
-cmd = "rattler-build build --recipe recipe.yaml"
-description = "Build conda packages from recipe.yaml into output/"
+[tasks.fmt]
+cmd = 'cargo fmt'
+description = 'Format source code with rustfmt'
 
-[tasks.publish]
-cmd = "rattler-build upload prefix --channel meso-forge output/linux-64/*.conda"
-depends-on = ["package"]
-description = "Build and upload packages to prefix.dev/meso-forge (requires PREFIX_API_KEY)"
+[tasks.fmt-check]
+cmd = 'cargo fmt -- --check'
+description = 'Check formatting without modifying files'
 
 [tasks.gen-diagrams]
-cmd = "cargo run -- -L script script/gen-plantuml.scm"
-description = "Generate PlantUML diagrams from data/campaign/ into render/"
+cmd = 'cargo run -- -L steel steel/gen-plantuml.scm'
+description = 'Generate PlantUML diagrams from data/campaign/ into render/'
 
 [tasks.gen-self]
-cmd = "cargo run -- -L script script/gen-self-diagrams.scm"
-description = "Generate self-documenting diagrams from data/self/ into wisdom/diagrams-gen/"
+cmd = 'cargo run -- -L steel steel/gen-self-diagrams.scm'
+description = 'Generate self-documenting diagrams from data/self/ into wisdom/diagrams-gen/'
 
-[tasks.render-self]
-cmd = "JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tsvg wisdom/diagrams-gen/*.puml && JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tpng wisdom/diagrams-gen/*.puml"
-depends-on = ["gen-self"]
-description = "Generate and render self-documenting diagrams to SVG and PNG"
+[tasks.package]
+cmd = 'rattler-build build --recipe recipes/recipe.yaml'
+description = 'Build conda packages from recipes/recipe.yaml into output/'
+
+[tasks.publish]
+cmd = 'nu pixi-script/publish.nu'
+depends-on = ['package']
+description = 'Build and upload packages to prefix.dev/meso-forge (requires PREFIX_API_KEY)'
 
 [tasks.render]
-cmd = "JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tsvg render/*.puml && JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -tpng render/*.puml"
-depends-on = ["gen-diagrams"]
-description = "Generate diagrams from data/campaign/ then render all .puml files to SVG and PNG"
+cmd = 'nu pixi-script/render.nu render'
+depends-on = ['gen-diagrams']
+description = 'Generate diagrams from data/campaign/ then render all .puml files to SVG and PNG'
+
+[tasks.render-self]
+cmd = 'nu pixi-script/render.nu wisdom/diagrams-gen'
+depends-on = ['gen-self']
+description = 'Generate and render self-documenting diagrams to SVG and PNG'
+
+[tasks.repl]
+cmd = 'cargo run'
+description = 'Start the interactive Steel Scheme REPL'
+
+[tasks.run]
+cmd = 'cargo run --'
+description = 'Run a Steel script: pixi run run <script.scm>'
+
+[tasks.set-version]
+cmd = 'nu pixi-script/set-version.nu'
+description = 'Set an explicit version in both Cargo.toml and pixi.toml (pass VERSION=x.y.z)'
+
+[tasks.sync-version]
+cmd = 'nu pixi-script/sync-version.nu'
+description = 'Copy the version from Cargo.toml into pixi.toml'
+
+[tasks.test]
+cmd = 'cargo test'
+description = 'Run the test suite'
 
 [dependencies]
-rust = ">=1.85"
-gh = ">=2.86"
-cargo-edit = ">=0.13"
-dasel = ">=3.2"
-sd = ">=1"
-rattler-build = ">=0.35"
-plantuml = ">=1.2024"
+cargo-edit = '>=0.13'
+dasel = '>=3.2'
+gh = '>=2.86'
+nushell = '>=0.102'
+plantuml = '>=1.2024'
+rattler-build = '>=0.35'
+rust = '>=1.85'

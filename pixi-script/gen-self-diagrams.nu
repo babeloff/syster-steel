@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 # gen-self-diagrams.nu — Generate self-documenting PlantUML diagrams for syster-steel.
 #
-# Loads data/self/*.sysml and runs script/gen-self-diagrams.scm to produce
+# Loads data/self/*.sysml and runs steel/gen-self-diagrams.scm to produce
 # PlantUML files in wisdom/diagrams-gen/, then optionally renders them.
 #
 # Usage (run from project root):
@@ -31,8 +31,8 @@ def main [
     let args = [
         "-e" $"(define *self-data-dir* \"($data_dir)\")"
         "-e" $"(define *self-out-dir*  \"($out_dir)\")"
-        "-L" "script"
-        "script/gen-self-diagrams.scm"
+        "-L" "steel"
+        "steel/gen-self-diagrams.scm"
     ]
 
     print $"\nGenerating diagrams from ($data_dir) → ($out_dir)/"

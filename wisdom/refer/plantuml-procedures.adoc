@@ -2,16 +2,16 @@
 :description: Complete reference for the plantuml.scm Steel library and its sub-libraries
 :icons: font
 
-The `script/` directory contains a suite of Steel Scheme libraries for generating
+The `steel/` directory contains a suite of Steel Scheme libraries for generating
 PlantUML diagrams from SysML v2 models.
 The entry point is `plantuml.scm`, which loads all sub-libraries and exposes a
 unified API.
 
 [source,scheme]
 ----
-(require "plantuml.scm")          ; with -L script on the load path
+(require "plantuml.scm")          ; with -L steel on the load path
 ; or
-(require "script/plantuml.scm")   ; from the project root
+(require "steel/plantuml.scm")   ; from the project root
 ----
 
 The `syster/base` functions (`syster/parse-file`, `hir-symbol/*`, etc.) and the
@@ -19,13 +19,13 @@ The `syster/base` functions (`syster/parse-file`, `hir-symbol/*`, etc.) and the
 is needed for them.
 
 On load, `plantuml.scm` creates a shared Handlebars registry `*hbs*` and
-registers ten templates from `*templates-dir*` (default: `"script/templates"`).
+registers ten templates from `*templates-dir*` (default: `"steel/templates"`).
 All diagram generators call `(hbs/render *hbs* ...)` internally.
 
 All procedures that generate diagrams accept an optional `opts` hash as their
 last argument.  Omitting it uses the defaults shown in the tables below.
 
-See xref:library-structure.adoc[Script library structure] for details on loading
+See xref:library-structure.adoc[Steel library structure] for details on loading
 individual sub-libraries independently.
 
 == Structural diagrams
@@ -57,7 +57,7 @@ Corresponds to `VCompartment` / `VTree` in the Java pilot implementation.
 | `"theme"` | string | `"plain"` | PlantUML `!theme` directive
 |===
 
-Output structure is controlled by `script/templates/bdd.hbs`.
+Output structure is controlled by `steel/templates/bdd.hbs`.
 
 === `(generate-ibd parent-sym symbols [opts])` → string
 
@@ -83,7 +83,7 @@ Corresponds to `VComposite` in the Java pilot implementation.
 | `"direction"` | string | `"left to right direction"` | Diagram layout direction
 |===
 
-Output structure is controlled by `script/templates/ibd.hbs`.
+Output structure is controlled by `steel/templates/ibd.hbs`.
 
 === `(generate-package-diagram symbols [opts])` → string
 
@@ -98,7 +98,7 @@ a name (which occurs when multiple source files declare the same package).
 ----
 
 Accepts `"title"` and `"theme"` options.
-Output structure is controlled by `script/templates/package.hbs`.
+Output structure is controlled by `steel/templates/package.hbs`.
 
 === `(generate-viewpoints-diagram symbols [opts])` → string
 
@@ -114,7 +114,7 @@ Selects `ViewpointDefinition`, `ViewDefinition`, `RenderingDefinition`, and
 ----
 
 Accepts `"title"` and `"theme"` options.
-Output structure is controlled by `script/templates/viewpoints.hbs`.
+Output structure is controlled by `steel/templates/viewpoints.hbs`.
 
 == Behavioral diagrams
 
@@ -135,7 +135,7 @@ implementation.
 ----
 
 Accepts a `"title"` option; the title defaults to `"<name> State Machine"`.
-Output structure is controlled by `script/templates/state-machine.hbs`.
+Output structure is controlled by `steel/templates/state-machine.hbs`.
 
 === `(generate-action-flow sym symbols [opts])` → string
 
@@ -155,7 +155,7 @@ Corresponds to `VAction` + `VActionMembers` in the Java pilot implementation.
 ----
 
 Accepts `"title"` (defaults to `"<name> Action Flow"`) and `"theme"` options.
-Output structure is controlled by `script/templates/action-flow.hbs`.
+Output structure is controlled by `steel/templates/action-flow.hbs`.
 
 === `(generate-action-flow-all symbols [opts])` → list of `(name . puml-string)` pairs
 
@@ -201,7 +201,7 @@ Corresponds to `VRequirement` + `VCompartment` in the Java pilot implementation.
 ----
 
 Accepts `"title"` (defaults to `"Requirement Diagram"`) and `"theme"` options.
-Output structure is controlled by `script/templates/requirement.hbs`.
+Output structure is controlled by `steel/templates/requirement.hbs`.
 
 === `(generate-requirement-diagram-scoped sym all-symbols [opts])` → string
 
@@ -237,7 +237,7 @@ improvement.
 ----
 
 Accepts `"title"` (defaults to `"<name> Sequence"`) and `"theme"` options.
-Output structure is controlled by `script/templates/sequence.hbs`.
+Output structure is controlled by `steel/templates/sequence.hbs`.
 
 === `(generate-use-case-diagram symbols [opts])` → string
 
@@ -267,7 +267,7 @@ Corresponds to `VCase` + `VCaseMembers` in the Java pilot implementation.
 | `"system_name"` | string | `"System"` | Label on the system boundary rectangle
 |===
 
-Output structure is controlled by `script/templates/use-case.hbs`.
+Output structure is controlled by `steel/templates/use-case.hbs`.
 
 == File output
 
@@ -359,19 +359,19 @@ Return `(hash-ref hash key)` if `key` is present, `#f` otherwise.
 
 == Complete example
 
-The script `script/examples/vehicle-diagrams.scm` shows the BDD + IBD pipeline:
+The script `steel/examples/vehicle-diagrams.scm` shows the BDD + IBD pipeline:
 
 [source,scheme]
 ----
-include::../../script/examples/vehicle-diagrams.scm[]
+include::../../steel/examples/vehicle-diagrams.scm[]
 ----
 
-The campaign generation script `script/gen-plantuml.scm` shows all diagram
+The campaign generation script `steel/gen-plantuml.scm` shows all diagram
 types against the multi-file `data/campaign/` model.
 
 == See also
 
-* xref:library-structure.adoc[Script library structure]
+* xref:library-structure.adoc[Steel library structure]
 * xref:hbs-bindings.adoc[Handlebars Steel bindings reference]
 * xref:syster-base-bindings.adoc[syster-base Steel bindings reference]
 * xref:../instruct/generate-plantuml-diagram.adoc[How to generate a PlantUML diagram]

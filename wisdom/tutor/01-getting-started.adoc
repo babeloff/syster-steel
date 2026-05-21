@@ -160,11 +160,11 @@ Press *Ctrl-C* to abandon a partially-typed expression.
 == 7. Write your first script
 
 Save the following as `hello.scm`
-(the full example is at `script/examples/hello.scm`):
+(the full example is at `steel/examples/hello.scm`):
 
 [source,scheme]
 ----
-include::../../script/examples/hello.scm[]
+include::../../steel/examples/hello.scm[]
 ----
 
 Run it:
@@ -250,11 +250,11 @@ Unlike `load`, it is cached — requiring the same path a second time is a no-op
 Use `require` for library modules you want to import cleanly.
 
 Create `greetings.scm` with an explicit export
-(the full example is at `script/examples/greetings.scm`):
+(the full example is at `steel/examples/greetings.scm`):
 
 [source,scheme]
 ----
-include::../../script/examples/greetings.scm[]
+include::../../steel/examples/greetings.scm[]
 ----
 
 Then from the REPL:

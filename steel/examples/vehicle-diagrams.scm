@@ -1,7 +1,7 @@
 ;; vehicle-diagrams.scm — generate BDD and IBD for vehicle.sysml
 ;;
 ;; Usage (from project root):
-;;   syster-steel -L script script/examples/vehicle-diagrams.scm
+;;   syster-steel -L steel steel/examples/vehicle-diagrams.scm
 ;;
 ;; Writes out/vehicle-bdd.puml and out/vehicle-ibd.puml, then renders to SVG.
 

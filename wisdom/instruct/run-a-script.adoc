@@ -54,7 +54,7 @@ Steel resolves `(require "module.scm")` relative to the current directory by def
 Add extra directories with `-L`:
 
 ----
-syster-steel -L /usr/share/syster-steel/script my-script.scm
+syster-steel -L /usr/share/syster-steel/steel my-script.scm
 ----
 
 Multiple `-L` flags are cumulative.
@@ -65,9 +65,9 @@ scripts are run.
 
 ----
 project/
-├── script/
+├── steel/
 │   ├── model.scm        ; domain helpers
-│   └── plantuml.scm     ; diagram generation (from syster-steel script/)
+│   └── plantuml.scm     ; diagram generation (from syster-steel steel/)
 ├── generate.scm         ; entry point
 └── vehicle.sysml
 ----
@@ -75,7 +75,7 @@ project/
 Run with:
 
 ----
-syster-steel -L script generate.scm
+syster-steel -L steel generate.scm
 ----
 
 Inside `generate.scm`:

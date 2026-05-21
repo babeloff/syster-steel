@@ -158,6 +158,60 @@ Start-up is fast enough for CLI invocations that process one model at a time.
 Steel is developed for use in https://helix-editor.com/[Helix editor] plugins,
 which gives it a real-world embedding workload and motivated maintenance.
 
+== Optional: Cranelift JIT (`jit2`)
+
+Steel-core ships an experimental Cranelift-based JIT compiler gated behind the
+`jit2` Cargo feature flag.
+It is **not enabled** in syster-steel by default.
+
+=== How the JIT works
+
+At runtime the VM profiles lambda call counts.
+When a lambda crosses a threshold it is passed to `jit_compile_lambda`,
+which compiles its bytecode to native machine code via
+https://cranelift.dev/[Cranelift].
+The compiled function is stored alongside the bytecode;
+the VM replaces the function's first opcode with `DynSuperInstruction`,
+which dispatches directly to the native pointer on subsequent calls,
+bypassing the bytecode interpreter loop entirely.
+
+The `jit2` feature additionally links `cranelift-native`,
+so the emitted code is optimised for the host CPU's instruction-set extensions
+(SSE, AVX, etc.) rather than a generic x86-64 baseline.
+
+=== Limitations
+
+The JIT silently falls back to bytecode interpretation for:
+
+* multi-arity lambdas
+* functions containing `PUREFUNC` opcodes
+
+There is no explicit opt-in or opt-out from Scheme code;
+the decision is made automatically per function at call time.
+
+=== How to enable it
+
+Add the `jit2` feature to the `steel-core` dependency in `Cargo.toml`:
+
+[source,toml]
+----
+steel-core = { version = "0.8.2", features = ["jit2"] }
+----
+
+The `jit` feature (without the `2`) also exists in the feature list but is
+dead — its `#[cfg]` gates are commented out in the steel-core source.
+Always use `jit2`.
+
+=== When it is worth enabling
+
+The JIT benefits tight numeric or recursive loops.
+For syster-steel's typical workload — filtering a list of HIR symbols,
+building a data hash, and calling `hbs/render` once —
+the hot paths are already fast in the bytecode interpreter
+and the JIT compile-time overhead may exceed any savings.
+Enable it if profiling shows interpreter dispatch as a bottleneck,
+or when running generation scripts over very large models.
+
 == What Steel does _not_ replace
 
 Steel scripts operate on an already-parsed, already-resolved model.
@@ -172,6 +226,7 @@ Steel scripts are transformation and generation tools, not a second parser.
 == See also
 
 * https://mattwparas.github.io/steel/book/start/embedded.html[Steel Book — Using Steel as an embedded scripting engine]
+* https://cranelift.dev/[Cranelift code generator]
 * xref:sysml-model-in-steel.adoc[How SysML models are represented in Steel]
 * xref:plantuml-pipeline.adoc[The SysML → PlantUML → SVG pipeline]
 * xref:../refer/syster-base-bindings.adoc[syster-base Steel bindings reference]

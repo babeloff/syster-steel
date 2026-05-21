@@ -19,7 +19,7 @@ SysML v2 text file
         ▼
    data hash (hash-maps and lists)
         │
-        │  hbs/render  (Handlebars template in script/templates/)
+        │  hbs/render  (Handlebars template in steel/templates/)
         ▼
    PlantUML source (.puml)
         │
@@ -97,12 +97,12 @@ state transitions — in a form that is independent of any output format.
 == Stage 4: Template rendering — `hbs/render`
 
 `plantuml.scm` passes the data hash to a Handlebars template via `hbs/render`.
-Templates live in `script/templates/` and declare the PlantUML structure;
+Templates live in `steel/templates/` and declare the PlantUML structure;
 scripts supply only the data.
 
 [source,scheme]
 ----
-(hbs/render *hbs* "bdd" data)   ; renders script/templates/bdd.hbs
+(hbs/render *hbs* "bdd" data)   ; renders steel/templates/bdd.hbs
 ----
 
 To customise output, edit the `.hbs` template or point `*templates-dir*` at your

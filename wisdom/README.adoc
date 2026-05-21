@@ -57,6 +57,7 @@ for the full explanation.
 === I want to understand how things work
 
 * xref:explain/steel-as-extension-language.adoc[Why Steel Scheme as the extension language]
+* xref:explain/steel-as-extension-language.adoc#_optional_cranelift_jit_jit2[The optional Cranelift JIT (`jit2`)]
 * xref:explain/sysml-model-in-steel.adoc[How SysML models are represented in Steel]
 * xref:explain/plantuml-pipeline.adoc[The SysML → PlantUML → SVG pipeline]
 

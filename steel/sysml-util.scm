@@ -1,7 +1,7 @@
 ;; sysml-util.scm — Shared utilities for SysML v2 PlantUML generation
 ;;
 ;; Load with:
-;;   (require "sysml-util.scm")   ; with -L script on the load path
+;;   (require "sysml-util.scm")   ; with -L steel on the load path
 
 (provide
   ;; PlantUML identifier safety

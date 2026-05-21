@@ -1,7 +1,7 @@
 # rattler-build conda recipe — syster-steel
 #
 # Build with rattler-build:
-#   rattler-build build --recipe recipe.yaml
+#   rattler-build build --recipe recipes/recipe.yaml
 #
 # This recipe produces two conda packages:
 #   syster-steel          — Steel Scheme REPL and script runner binary
@@ -14,7 +14,7 @@ context:
 
 # ── Shared source ──────────────────────────────────────────────────────────────
 source:
-  - path: .
+  - path: ..
     use_gitignore: true
 
 # ── Outputs ───────────────────────────────────────────────────────────────────
@@ -62,8 +62,8 @@ outputs:
       number: 0
       noarch: generic
       script:
-        - mkdir -p $PREFIX/share/syster-steel/script
-        - cp -r script/. $PREFIX/share/syster-steel/script/
+        - mkdir -p $PREFIX/share/syster-steel/steel
+        - cp -r steel/. $PREFIX/share/syster-steel/steel/
 
     requirements:
       run:
@@ -72,13 +72,13 @@ outputs:
 
     tests:
       - script:
-          - test -d $PREFIX/share/syster-steel/script
+          - test -d $PREFIX/share/syster-steel/steel
           - JAVA_TOOL_OPTIONS=-Djava.awt.headless=true plantuml -version
 
     about:
       summary: Steel Scheme scripts for generating PlantUML diagrams from SysML v2 views
       description: |
-        Steel Scheme scripts (script/plantuml.scm and script/templates/) that
+        Steel Scheme scripts (steel/plantuml.scm and steel/templates/) that
         drive PlantUML diagram generation from SysML v2 models. Scripts accept
         a SysML view description and produce a .puml source file, then invoke
         plantuml to render it as SVG (or other supported formats). Requires

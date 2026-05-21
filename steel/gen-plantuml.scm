@@ -1,9 +1,9 @@
 ;; gen-plantuml.scm — Generate PlantUML diagrams from the SysML campaign model.
 ;;
 ;; Usage (from project root):
-;;   syster-steel -L script script/gen-plantuml.scm
-;;   syster-steel -L script -e '(define *campaign-dir* "data/other")' \
-;;                script/gen-plantuml.scm
+;;   syster-steel -L steel steel/gen-plantuml.scm
+;;   syster-steel -L steel -e '(define *campaign-dir* "data/other")' \
+;;                steel/gen-plantuml.scm
 ;;
 ;; By default loads all .sysml files under data/campaign/ and
 ;; writes diagrams to render/.
@@ -12,7 +12,7 @@
 ;;   (define *output-dir*   "path/to/out/")
 ;;   (define *render-fmt*   "svg")   ; svg | png | pdf | txt | #f to skip
 
-(require "plantuml.scm")            ; script/plantuml.scm
+(require "plantuml.scm")            ; steel/plantuml.scm
 (require-builtin steel/filesystem)  ; path-exists? create-directory!
 
 ;; ── Configuration ─────────────────────────────────────────────────────────────

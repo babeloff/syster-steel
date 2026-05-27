@@ -1,0 +1,192 @@
+= Graph Layout Crates for Rust
+:toc: left
+:toclevels: 2
+:icons: font
+
+Notes on the Rust graph layout ecosystem, surveyed while evaluating alternatives to the
+link:../explain/plantuml-pipeline.adoc[current layout-rs pipeline].
+
+Graphviz provides ten layout engines.
+https://graphviz.org/docs/layouts/[graphviz.org/docs/layouts/]
+The sections below map each algorithm class to available Rust crates.
+
+== Currently in use
+
+=== layout-rs
+
+https://crates.io/crates/layout-rs[layout-rs] (v0.1.3) +
+Pure-Rust Sugiyama hierarchical layout.
+Parses DOT source, assigns (x, y) positions, and writes SVG directly.
+
+Registered in `src/layout.rs` as two Steel bindings:
+
+* `layout/dot->svg` — returns an SVG string
+* `layout/render-dot` — writes an SVG file
+
+*Supported DOT attributes:* `rankdir` (`TB`/`LR`), node `shape`
+(`box`, `doublecircle`, `record`, `Mrecord`), `label`, `color`,
+`fillcolor`, `style=filled/dashed`, `fontsize`, `width`, `penwidth`,
+edge ports.
+
+*Silently ignored:* `layout=`, cluster subgraphs, HTML labels, most
+node shapes, `arrowhead`/`arrowtail`, `weight`, `rank`, `ranksep`,
+`nodesep`, `URL`.
+
+This covers all eight SysML diagram types currently generated —
+all are hierarchical and use only `box` nodes.
+
+== Hierarchical / Sugiyama (`dot` equivalent)
+
+Several ports of https://github.com/dagrejs/dagre[dagre-js] exist;
+all implement the same Sugiyama layer-assignment algorithm as `layout-rs`
+and Graphviz `dot`.
+
+[cols="1,1,3"]
+|===
+| Crate | Version | Notes
+
+| https://crates.io/crates/dagre[dagre]
+| 0.1.1
+| Direct port of dagre-js
+
+| https://crates.io/crates/dagre-dgl-rs[dagre-dgl-rs]
+| 0.1.1
+| "Faithful" port of dagre-js
+
+| https://crates.io/crates/dugong[dugong]
+| 0.5.0
+| Dagre-compatible port; most actively maintained; MSRV 1.87;
+  `dagreish` feature flag for strict compatibility
+
+| https://crates.io/crates/mermaid-dagre[mermaid-dagre]
+| 0.1.1
+| Backs mermaid-core; same algorithm; API may be coupled to mermaid internals
+|===
+
+None of these offer functionality beyond what `layout-rs` already provides
+for this project.
+
+== Force-directed (`neato` / `fdp` / `sfdp` equivalent)
+
+Force-directed layout iteratively resolves node positions by simulating
+attractive and repulsive forces.
+All crates in this class produce *coordinates only* — a separate rendering
+step is needed to emit SVG.
+
+[cols="1,1,3"]
+|===
+| Crate | Version | Notes
+
+| https://crates.io/crates/fdg-sim[fdg-sim]
+| 0.9.1
+| Generic force-directed simulation framework.
+  Companion crates `fdg-img` (SVG), `fdg-macroquad` (interactive),
+  `fdg-wasm` (JavaScript).
+
+| https://crates.io/crates/fa2[fa2]
+| 0.1.0
+| Port of ForceAtlas2 (the Gephi algorithm).
+  MSRV 1.83.
+
+| https://crates.io/crates/manatee[manatee]
+| 0.5.0
+| COSE/FCoSE algorithms — force-directed with compound (hierarchical)
+  node grouping and alignment/placement constraints.
+  Outputs `LayoutResult` coordinates.
+  MSRV 1.87.
+
+| https://crates.io/crates/vibe-graph-layout-gpu[vibe-graph-layout-gpu]
+| 0.1.1
+| GPU-accelerated via wgpu/WebGPU.
+  Not suitable for headless server-side use.
+|===
+
+Force-directed layout is appropriate for free-form network graphs where
+hierarchical flow is not meaningful — not typical of SysML structural
+or behaviour diagrams.
+
+== Circular / radial (`circo` / `twopi` equivalent)
+
+No pure-Rust crate specifically implements circular or radial graph layout
+as of the survey date (2026-05).
+This is the largest gap relative to Graphviz.
+
+== Full Graphviz via C bindings
+
+=== graphviz-anywhere
+
+https://crates.io/crates/graphviz-anywhere[graphviz-anywhere] (v0.2.1) +
+Safe Rust wrapper around the real Graphviz C library with *bundled
+prebuilt native binaries*.
+Exposes all eight layout engines: `dot`, `neato`, `fdp`, `sfdp`,
+`circo`, `twopi`, `osage`, `patchwork`.
+
+On native targets it links against the bundled C libraries (no separate
+Graphviz install required).
+On `wasm32-unknown-unknown` it delegates to a host-provided JavaScript
+function (`__graphviz_anywhere_render`).
+
+Trade-off: eliminates the Java/PlantUML dependency but reintroduces a
+bundled C binary dependency.
+MSRV 1.64; license Apache-2.0.
+
+This would be the right choice if circular or radial layout were ever
+needed and a C dependency is acceptable.
+
+== PlantUML without Java
+
+=== plantuml-little
+
+https://crates.io/crates/plantuml-little[plantuml-little] (v1.2026.2-3) +
+Claims "byte-exact SVG parity with Java PlantUML" for `.puml → .svg`
+conversion.
+MSRV 1.82.
+
+License is GPL-3.0-or-later / LGPL-3.0-or-later / Apache-2.0 / EPL-2.0 / MIT
+(multi-license, likely mirroring PlantUML's own licensing).
+The GPL option may be a concern depending on distribution requirements.
+
+Worth monitoring; would re-enable the `.puml → .svg` path without
+requiring a Java runtime.
+
+== Summary
+
+[cols="2,1,1,1"]
+|===
+| Algorithm class | Graphviz engine(s) | Pure-Rust option | Status
+
+| Hierarchical (Sugiyama)
+| `dot`
+| layout-rs, dagre family
+| Well covered — `layout-rs` in use
+
+| Force-directed
+| `neato`, `fdp`, `sfdp`
+| fdg-sim, fa2, manatee
+| Available; outputs coordinates only
+
+| Circular
+| `circo`
+| —
+| Gap; no pure-Rust option found
+
+| Radial
+| `twopi`
+| —
+| Gap; no pure-Rust option found
+
+| Clustered / treemap
+| `osage`, `patchwork`
+| —
+| Gap; no pure-Rust option found
+
+| All engines (C binding)
+| all eight
+| graphviz-anywhere
+| Bundled C binary; no Java required
+
+| PlantUML rendering
+| (internal Smetana)
+| plantuml-little
+| GPL license; worth monitoring
+|===

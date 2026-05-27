@@ -7,7 +7,8 @@ Block Definition Diagram (BDD),
 using Steel scripts to drive the conversion.
 
 *Prerequisites:* complete xref:02-loading-a-sysml-model.adoc[Tutorial 2].
-You need `plantuml` on your `PATH` — verify with `plantuml -version`.
+No additional dependencies are required — SVG is rendered in-process via the
+`layout/render-dot` Rust binding (backed by `layout-rs`).
 
 The diagram below shows the full generation pipeline you will follow in this tutorial:
 
@@ -83,42 +84,34 @@ class "Chassis" <<block>> {
 
 == 4. Render to SVG
 
+SVG rendering happens automatically as part of diagram generation — no separate
+step is needed.  The `dot.scm` library generates a DOT-language graph from the
+same symbol data, and the `layout/render-dot` Rust binding (backed by
+`layout-rs`, using the Sugiyama hierarchical layout algorithm) converts it to SVG
+entirely in-process.
+
+When you ran the script in Step 3, `vehicle-bdd.svg` was written alongside
+`vehicle-bdd.puml`.  Open it in any browser or SVG viewer.
+
+The `.puml` file is also written for reference.
+If you have plantuml installed separately, you can render it manually:
+
 ----
 plantuml -svg vehicle-bdd.puml
 ----
 
-This creates `vehicle-bdd.svg` in the same directory as the `.puml` file.
-Open it in any browser or SVG viewer.
-
-To render to PNG instead:
+or to PNG:
 
 ----
 plantuml -png vehicle-bdd.puml
 ----
 
-== 5. Automate rendering from Steel
-
-Add these lines to the end of `generate-bdd.scm` to render automatically:
-
-[source,scheme]
-----
-(define (render-plantuml puml-path format)
-  (let ([flag (string-append "-" format)])
-    (run-process (list "plantuml" flag puml-path))))
-
-(render-plantuml "vehicle-bdd.puml" "svg")
-(displayln "Rendered vehicle-bdd.svg")
-----
-
-Now a single invocation does everything:
-
-----
-syster-steel generate-bdd.scm
-----
+plantuml is *not* a required dependency; the `.svg` produced by `layout-rs` is
+the primary output.
 
 == What next?
 
 * xref:../instruct/generate-plantuml-diagram.adoc[How-to: Generate a PlantUML diagram] — other diagram types
-* xref:../instruct/render-diagrams.adoc[How-to: Render diagrams] — format options
+* xref:../instruct/render-diagrams.adoc[How-to: How SVG diagrams are rendered] — layout-rs and optional plantuml
 * xref:../refer/plantuml-procedures.adoc[Reference: PlantUML generation procedures]
-* xref:../explain/plantuml-pipeline.adoc[Explanation: The SysML → PlantUML → SVG pipeline]
+* xref:../explain/plantuml-pipeline.adoc[Explanation: The SysML diagram generation pipeline]

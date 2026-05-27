@@ -1,8 +1,12 @@
-= The SysML v2 → PlantUML → SVG pipeline
+= The SysML v2 → diagram generation pipeline
 :description: Architecture of the model-to-diagram transformation pipeline
 :icons: font
 
 == Overview
+
+The pipeline has two parallel output paths from a shared data-transformation
+stage.  Both paths are exercised together when you run `pixi run gen-diagrams`
+or `pixi run gen-self`.
 
 ----
 SysML v2 text file
@@ -19,21 +23,24 @@ SysML v2 text file
         ▼
    data hash (hash-maps and lists)
         │
-        │  hbs/render  (Handlebars template in steel/templates/)
-        ▼
-   PlantUML source (.puml)
+        ├─── hbs/render  (Handlebars template in steel/templates/)
+        │              │
+        │              ▼
+        │       PlantUML source (.puml)   ← kept for reference / manual use
         │
-        │  plantuml -svg
-        ▼
-   SVG / PNG / PDF
+        └─── dot.scm  (DOT language generator)
+                       │
+                       │  layout/render-dot  (Rust binding, layout-rs crate)
+                       ▼
+                SVG  ← primary rendered output
 ----
 
 image::../diagrams-gen/pipeline-flow.svg[Diagram generation pipeline action flow,width=600,align=center]
 
 Each stage is independent and composable.
 You can stop at any point —
-for example, to inspect the symbol list before generating PlantUML,
-or to post-process the `.puml` source before rendering.
+for example, to inspect the symbol list before generating diagrams,
+or to post-process the `.puml` source if you have plantuml installed locally.
 
 == Stage 1: Parsing — `syster/parse-file`
 
@@ -94,7 +101,7 @@ state transitions — in a form that is independent of any output format.
                                    "role" "engine"))))
 ----
 
-== Stage 4: Template rendering — `hbs/render`
+== Stage 4a: Template rendering — `hbs/render` → `.puml`
 
 `plantuml.scm` passes the data hash to a Handlebars template via `hbs/render`.
 Templates live in `steel/templates/` and declare the PlantUML structure;
@@ -105,12 +112,41 @@ scripts supply only the data.
 (hbs/render *hbs* "bdd" data)   ; renders steel/templates/bdd.hbs
 ----
 
+The output is a `.puml` source file that is written to disk for reference.
+If you have plantuml installed locally you can render it manually;
+see xref:../instruct/render-diagrams.adoc[How to render diagrams] for details.
+
 To customise output, edit the `.hbs` template or point `*templates-dir*` at your
 own template directory before requiring `plantuml`.
 
 The `hbs/*` functions are registered automatically at engine startup.
 See xref:../refer/hbs-bindings.adoc[Handlebars Steel bindings reference] for
 the full `hbs/*` API.
+
+== Stage 4b: DOT generation and layout — `dot.scm` + `layout/render-dot` → SVG
+
+`dot.scm` contains DOT language generators for all eight diagram types.
+Each generator takes the same filtered symbol list and produces a DOT graph
+string.  The DOT string is passed directly to `layout/render-dot`, a Rust
+binding to the `layout-rs` crate, which applies the Sugiyama hierarchical layout
+algorithm and emits an SVG string — the same algorithm family used by Graphviz's
+`dot` command and PlantUML's built-in Smetana renderer.
+
+[source,scheme]
+----
+(require "dot.scm")
+
+; Generate DOT source for a BDD
+(define dot-text (generate-bdd-dot symbols))
+
+; Render DOT → SVG in-process (no external binary needed)
+(define svg-text (layout/render-dot dot-text))
+
+(write-string-to-file svg-text "vehicle-bdd.svg")
+----
+
+This path requires no Java installation and no external `plantuml` binary.
+SVG output is produced entirely within the Rust process.
 
 == Stage 5: PlantUML examples
 
@@ -152,14 +188,21 @@ engine -right-> chassis : driveShaft
 Selects `Package` symbols and `Import` relationships,
 rendering packages as namespaces and imports as dashed arrows.
 
-== Stage 6: Rendering — `plantuml`
+== Stage 5: Output
 
-PlantUML is a Java application that reads `.puml` source and writes image files.
-The Steel script invokes it via `steel/process`:
+Running `pixi run gen-diagrams` (or `pixi run gen-self`) produces two artefacts
+per diagram:
 
-[source,scheme]
+* A `.puml` file written by `plantuml.scm` via `hbs/render`.  This is kept for
+  reference and for manual rendering if plantuml is separately installed.
+* An `.svg` file produced in-process by `dot.scm` + `layout/render-dot`.
+  No Java or external binary is required.
+
+If you do have plantuml installed, you can render a `.puml` file manually:
+
+[source,shell]
 ----
-(run-process (list "plantuml" "-svg" "vehicle-bdd.puml"))
+plantuml -svg vehicle-bdd.puml
 ----
 
 [cols="1,1,3"]
@@ -181,16 +224,19 @@ Changing diagram style — adding skinparam directives, switching layout directi
 reformatting class boxes — requires editing only the template, not the script.
 Conversely, adding a new symbol kind to the diagram requires editing only the script.
 
-== Why PlantUML rather than direct SVG generation?
+== Why two output paths?
 
-Generating SVG directly from Steel would require a layout engine.
-Graph layout — routing edges, avoiding overlaps — is a complex problem that
-PlantUML (via Graphviz/Smetana) solves well.
-By generating PlantUML text, the Steel scripts stay simple (string manipulation)
-and delegate the hard part to an established tool.
+The `.puml` path (Handlebars templates) was the original approach.
+PlantUML's text format is human-readable and diffable,
+making it useful when checking diagram source into version control.
+It is preserved as a reference output and for users who want to customise
+diagrams with PlantUML's rich skinparam vocabulary.
 
-PlantUML's text format is also human-readable and diffable,
-which is useful when checking diagrams into version control alongside the SysML source.
+The DOT path (`dot.scm` + `layout/render-dot`) was added to remove the Java
+dependency.  Graph layout — routing edges, avoiding overlaps — is handled by
+the `layout-rs` crate's Sugiyama algorithm, which is the same hierarchical
+layout family used by Graphviz's `dot` command and PlantUML's Smetana renderer.
+SVG is produced entirely in-process, with no external binary required.
 
 == View-driven generation
 

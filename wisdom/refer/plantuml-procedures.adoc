@@ -2,6 +2,13 @@
 :description: Complete reference for the plantuml.scm Steel library and its sub-libraries
 :icons: font
 
+NOTE: The procedures in this library produce *PlantUML source text* (`.puml` files).
+SVG rendering is handled separately by `dot.scm` + the `layout/render-dot` Rust
+binding (backed by the `layout-rs` crate), which requires no Java or external
+binary.  See xref:library-structure.adoc[Steel library structure] for the full
+picture, and xref:../instruct/render-diagrams.adoc[How diagrams are rendered to
+SVG] for usage details.
+
 The `steel/` directory contains a suite of Steel Scheme libraries for generating
 PlantUML diagrams from SysML v2 models.
 The entry point is `plantuml.scm`, which loads all sub-libraries and exposes a

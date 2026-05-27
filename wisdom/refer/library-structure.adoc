@@ -3,8 +3,16 @@
 :icons: font
 
 The `steel/` directory is organized as a suite of Steel Scheme libraries.
-`plantuml.scm` is the recommended entry point — it defines all diagram generators
-inline and provides a unified API without requiring sub-library imports.
+`plantuml.scm` is the recommended entry point for generating PlantUML source —
+it defines all diagram generators inline and provides a unified API without
+requiring sub-library imports.
+
+`dot.scm` is the companion library that generates DOT-language graphs for the
+same eight diagram types and renders them to SVG in-process via the
+`layout/render-dot` Rust binding.  The generation tasks (`gen-diagrams`,
+`gen-self`) use both libraries together: `plantuml.scm` writes `.puml` files for
+reference, and `dot.scm` + `layout/render-dot` produce the `.svg` files used in
+documentation.
 
 The sub-library files (`plantuml-action.scm`, etc.) are standalone alternatives
 for scripts that need only one diagram type and want to manage their own
@@ -12,16 +20,19 @@ Handlebars registry.
 
 NOTE: Steel closures store name references rather than captured values, so
 cross-module function capture (the pattern `(define alias imported-fn)`) does
-not work across module boundaries.  All generators in `plantuml.scm` are
-therefore implemented inline — not delegated to sub-libraries — so that every
-closure resolves its references within the same module scope.
+not work across module boundaries.  All generators in `plantuml.scm` and
+`dot.scm` are therefore implemented inline — not delegated to sub-libraries —
+so that every closure resolves its references within the same module scope.
 
 == File layout
 
 ----
 steel/
 ├── sysml-util.scm            — Shared utilities (pu-alias, filter-kind, rel-targets, …)
-├── plantuml.scm              — All-in-one: all generators + *hbs* registry (inline, no sub-library requires)
+├── plantuml.scm              — All-in-one: all PlantUML generators + *hbs* registry
+│                               Writes .puml source files (inline, no sub-library requires)
+├── dot.scm                   — DOT language generators for all 8 diagram types
+│                               Uses layout/render-dot (Rust binding) to produce .svg
 ├── plantuml-action.scm       — Standalone action flow generator  (explicit hbs arg)
 ├── plantuml-requirement.scm  — Standalone requirement generator  (explicit hbs arg)
 ├── plantuml-sequence.scm     — Standalone sequence generator     (explicit hbs arg)
@@ -53,6 +64,11 @@ image::../diagrams-gen/library-ibd.svg[SchemeLibrary internal block diagram,widt
 ----
 plantuml.scm
   └── requires sysml-util.scm          (utilities only)
+      Produces: .puml source (via hbs/render + Handlebars templates)
+
+dot.scm
+  └── requires sysml-util.scm
+      Produces: .svg (via layout/render-dot Rust binding → layout-rs crate)
 
 plantuml-action.scm
   └── requires sysml-util.scm
@@ -149,6 +165,7 @@ scripts without any `require`:
 * `hbs/*` — Handlebars template engine (see xref:hbs-bindings.adoc[])
 * `syster/*` — SysML v2 model loading (see xref:syster-base-bindings.adoc[])
 * `hir-symbol/*`, `hir-rel/*` — HIR accessor functions
+* `layout/render-dot` — DOT → SVG layout engine (backed by the `layout-rs` crate; used by `dot.scm`)
 * `system` — run a shell command via `/bin/sh -c`
 * `glob-list` — expand a glob pattern into a list of path strings
 

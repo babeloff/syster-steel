@@ -1,6 +1,6 @@
 schema_version: 1
 context:
-    version: 0.1.3
+    version: 0.1.4
 source:
     - path: ..
       use_gitignore: true
@@ -15,7 +15,7 @@ outputs:
       requirements:
         build:
             - ${{ compiler('rust') }}
-            - rust >=1.85
+            - rust >=1.95
       tests:
         - script:
             - syster-steel --help

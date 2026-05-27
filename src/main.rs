@@ -1,6 +1,7 @@
 mod bridge;
 mod cli;
 mod hbs;
+mod layout;
 mod repl;
 mod sys;
 
@@ -19,6 +20,7 @@ fn main() -> Result<()> {
     let mut engine = Engine::new();
     bridge::register(&mut engine);
     hbs::register(&mut engine);
+    layout::register(&mut engine);
     sys::register(&mut engine);
 
     for path in &cli.load_paths {
